@@ -28,3 +28,13 @@ Thumbs.db
 *.db
 media/
 uploads/
+
+# скриншоты переписки
+2026-*.png
+.tmp_shots/
+
+# бэкенд
+backend/*.db
+backend/media/
+backend/.env
+.venv/

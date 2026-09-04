@@ -65,6 +65,8 @@ tags:
     description: Полевые отчёты (компонент C5) — сценарий S6
   - name: media
     description: Загрузка фото
+  - name: imagery
+    description: Заявки на новую съёмку ДЗЗ — двусторонняя связь с оператором
   - name: export
     description: Выгрузка данных для отчётности ООПТ
 
@@ -172,6 +174,36 @@ paths:
               schema: { $ref: '#/components/schemas/AuthResponse' }
         '401':
           description: Неверные учётные данные
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      summary: Обновить пару токенов
+      description: |
+        Access-токен живёт час. Refresh обменивается на новую пару, чтобы
+        пользователю не приходилось входить заново в середине разметки.
+        Refresh-токен не принимается там, где ожидается access, и наоборот.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: Новая пара токенов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Токен истёк, повреждён или неверного типа
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -656,6 +688,46 @@ paths:
               schema: { $ref: '#/components/schemas/Enrollment' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /events/{event_id}/consent/{token}/sign:
+    post:
+      tags: [events]
+      security: []
+      summary: Подписание согласия законным представителем
+      description: |
+        Открывается по одноразовой ссылке из письма родителю. Без авторизации:
+        у родителя нет аккаунта, и заводить его ради одного действия означало
+        бы собирать лишние персональные данные. Защита — неугадываемый токен
+        со сроком жизни 14 дней.
+
+        Экран подписания — публичная страница, отдельная от приложения.
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Согласие подписано, допуск пересчитан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+        '404':
+          description: Ссылка не найдена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Согласие уже подписано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Срок действия ссылки истёк
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   # ==================== S6: полевой отчёт ====================
 
   /reports:
@@ -689,6 +761,23 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
 
   /reports/{report_id}:
+    get:
+      tags: [reports]
+      summary: Карточка отчёта
+      description: Доступна автору отчёта и сотрудникам ООПТ.
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Отчёт
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FieldReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [reports]
       summary: Дополнить и отправить отчёт (фото «после»)
@@ -716,6 +805,107 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FieldReport' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /moderation/segments/batch:
+    post:
+      tags: [moderation]
+      summary: Пакетное решение по нескольким участкам
+      description: |
+        Соседние участки одного берега после шторма выглядят одинаково.
+        Требовать отдельного клика по каждому — верный способ добиться того,
+        что инспектор перестанет открывать очередь.
+
+        Недоступные участки пропускаются с указанием причины, а не роняют
+        весь запрос: инспектор должен видеть, что именно не применилось.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchModerationIn' }
+      responses:
+        '200':
+          description: Решения применены
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchModerationResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /moderation/digest:
+    get:
+      tags: [moderation]
+      summary: Сводка по территории за период
+      description: |
+        Механика удержания сотрудника ООПТ: без неё система остаётся для него
+        источником работы, а не пользы. Отвечает на единственный вопрос,
+        который он себе задаёт — «что я с этого получил».
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 90 }
+      responses:
+        '200':
+          description: Сводка
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestOut' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /segments/{segment_id}/imagery-requests:
+    post:
+      tags: [imagery]
+      summary: Запросить новую съёмку участка
+      description: |
+        Делает связь с данными ДЗЗ двусторонней: платформа не только
+        потребляет снимки, но и запрашивает их. Геопортал Роскосмоса
+        принимает такие заявки штатно.
+
+        Если аномалия на участке растёт, приоритет автоматически повышается
+        до `urgent`: пока идёт обычная очередь оператора, свалка успевает
+        вырасти ещё.
+
+        Повторная заявка при активной блокируется — две заявки на одну
+        съёмку означают лишние расходы и путаницу в очереди оператора.
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImageryRequestCreate' }
+      responses:
+        '201':
+          description: Заявка отправлена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImageryRequestOut' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: По участку уже есть активная заявка
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /imagery-requests:
+    get:
+      tags: [imagery]
+      summary: Заявки на съёмку
+      description: Инспектор видит только заявки своей территории.
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ImageryRequestStatus' }
+        - name: segment_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ImageryRequestOut' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ==================== Медиа ====================
 
@@ -868,6 +1058,20 @@ components:
         certificate_id:  { type: string, nullable: true, example: "КБ-2026-0417" }
         oopt_id:         { type: string, nullable: true, description: Только для oopt_staff }
         annotations_count: { type: integer, example: 8 }
+        accuracy:
+          type: number
+          format: float
+          nullable: true
+          description: |
+            Измеренная точность разметки по скрытым контрольным заданиям.
+            `null`, пока заданий меньше порога: показывать новичку «0%»
+            после одной ошибки — способ его потерять. В интерфейсе в этом
+            случае выводите «недостаточно данных», а не ноль.
+          example: 0.87
+        control_tasks_count:
+          type: integer
+          description: Сколько контрольных заданий пройдено — объём выборки
+          example: 40
 
     AuthResponse:
       type: object
@@ -914,6 +1118,18 @@ components:
         verified:       { type: boolean }
         last_verified_at: { type: string, format: date-time, nullable: true }
         is_subscribed:  { type: boolean, description: Подписан ли текущий пользователь }
+        is_growing:
+          type: boolean
+          description: |
+            Аномалия растёт от снимка к снимку. Маленькая растущая свалка
+            требует внимания раньше, чем большая стабильная — показывайте
+            это заметным бейджем.
+        growth_rate:
+          type: number
+          format: float
+          nullable: true
+          description: Прирост площади аномалии между двумя последними сценами, доля
+          example: 0.12
 
     SegmentDetail:
       allOf:
@@ -1000,6 +1216,14 @@ components:
           description: Агрегированные отметки для показа инспектору
           items: { $ref: '#/components/schemas/Mark' }
         queued_at: { type: string, format: date-time }
+        annotators_accuracy:
+          type: number
+          format: float
+          nullable: true
+          description: |
+            Средняя измеренная точность разметчиков участка. Ради неё и
+            делались контрольные задания: инспектор видит не «трое что-то
+            отметили», а «трое с точностью 87%».
 
     CourseModule:
       type: object
@@ -1091,3 +1315,110 @@ components:
         status:     { type: string, enum: [draft, pending, approved, rejected] }
         submitted_at: { type: string, format: date-time, nullable: true }
         moderated_at: { type: string, format: date-time, nullable: true }
+
+    # ---------- Пакетная модерация и сводка ----------
+
+    BatchModerationIn:
+      type: object
+      required: [segment_ids, decision]
+      properties:
+        segment_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string }
+          description: Ограничение в 50 не даёт случайно подтвердить всю очередь
+        decision: { $ref: '#/components/schemas/ModerationDecision' }
+        comment:  { type: string, maxLength: 500 }
+
+    BatchModerationResult:
+      type: object
+      required: [applied, skipped]
+      properties:
+        applied:
+          type: array
+          items: { type: string }
+          description: Участки, по которым решение принято
+        skipped:
+          type: object
+          additionalProperties: { type: string }
+          description: |
+            Участок → код причины пропуска: `segment_not_found`,
+            `foreign_territory`, `segment_not_in_queue`.
+            Показывайте инспектору, что именно не применилось.
+
+    DigestOut:
+      type: object
+      required: [period_from, period_to, segments_total]
+      properties:
+        period_from: { type: string, format: date-time }
+        period_to:   { type: string, format: date-time }
+        segments_total:      { type: integer }
+        segments_confirmed:  { type: integer }
+        segments_cleaned:    { type: integer }
+        annotations_received: { type: integer }
+        volunteers_active:   { type: integer }
+        volume_kg_total:     { type: number, format: float }
+        median_moderation_hours:
+          type: number
+          format: float
+          nullable: true
+          description: Медиана времени от консенсуса до решения (KPI Q3)
+        top_segments:
+          type: array
+          items: { $ref: '#/components/schemas/Segment' }
+
+    ModerationDecision:
+      type: string
+      enum: [approve, reject]
+
+    # ---------- Заявки на съёмку ДЗЗ ----------
+
+    ImageryRequestStatus:
+      type: string
+      enum: [queued, accepted, delivered, rejected]
+      description: |
+        Отражает реальный процесс оператора ДЗЗ:
+        * `queued` — отправлена оператору
+        * `accepted` — принята к съёмке
+        * `delivered` — снимок получен и нарезан
+        * `rejected` — отказ (облачность, приоритет других задач, ограничения)
+
+    ImageryPriority:
+      type: string
+      enum: [normal, urgent]
+      description: |
+        `urgent` выставляется автоматически, если аномалия на участке растёт —
+        пока идёт обычная очередь оператора, свалка успевает вырасти ещё.
+
+    ImageryRequestCreate:
+      type: object
+      properties:
+        priority: { $ref: '#/components/schemas/ImageryPriority' }
+        comment:  { type: string, maxLength: 1000 }
+
+    ImageryRequestOut:
+      type: object
+      required: [id, segment_id, oopt_id, priority, status, created_at]
+      properties:
+        id:               { type: string, format: uuid }
+        segment_id:       { type: string }
+        segment_name_key: { type: string, nullable: true }
+        oopt_id:          { type: string }
+        priority: { $ref: '#/components/schemas/ImageryPriority' }
+        status:   { $ref: '#/components/schemas/ImageryRequestStatus' }
+        comment:  { type: string, nullable: true }
+        expected_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Ожидаемая дата съёмки со слов оператора. Показывайте её:
+            без неё заявка выглядит отправленной в пустоту.
+        reject_reason: { type: string, nullable: true }
+        external_id:
+          type: string
+          nullable: true
+          description: Идентификатор заявки на стороне оператора ДЗЗ — для сверки
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at:   { type: string, format: date-time }
