@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>КОСМОБЕРЕГ — прототип MVP</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">КОСМО<span>БЕРЕГ</span></div>
+  <div class="tiny muted" id="appSubtitle"></div>
+  <div class="lang-switch" id="langSwitch"></div>
+  <div class="role-chip">
+    <span id="roleLabel"></span>
+    <span class="role-badge" id="roleBadge"></span>
+    <button class="btn ghost sm" id="resetBtn"></button>
+  </div>
+</div>
+
+<nav class="scenario-nav" id="scenarioNav"></nav>
+
+<main class="wrap" id="app"></main>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

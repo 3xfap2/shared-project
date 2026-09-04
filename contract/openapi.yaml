@@ -1,0 +1,1093 @@
+openapi: 3.1.0
+
+info:
+  title: КОСМОБЕРЕГ API
+  version: 1.0.0
+  description: |
+    Контракт между фронтендом и бэкендом платформы КОСМОБЕРЕГ.
+
+    ## Как этим пользоваться
+
+    Это **единственный источник истины** об интерфейсе между фронтом и бэком.
+    Фронт кодируется против контракта (с моками, пока бэка нет), бэк реализует
+    контракт. Стыковка = смена базового URL.
+
+    Изменение контракта — только по согласованию обеих сторон. Правило простое:
+    **сначала правим contract/openapi.yaml, потом код.**
+
+    ## Ключевое решение: локализация на клиенте
+
+    API **никогда не возвращает переведённый текст**. Возвращаются доменные коды
+    (`status: "problem"`, `role: "observer"`) и ключи локализации
+    (`name_key: "seg.ustie.name"`). Клиент переводит их через `i18n.js`.
+
+    Причины:
+    - фронт уже несёт словарь на 3 языка (ru/en/zh) — дублировать его на бэке не нужно;
+    - смена языка не требует запроса к серверу;
+    - добавление 4-го языка не затрагивает бэкенд вообще.
+
+    Исключение — **пользовательский контент** (описания в отчётах, имена
+    пользователей): возвращается как есть, без перевода.
+
+    ## Что вычисляется только на сервере
+
+    Клиент не может это подделать, поэтому такие значения приходят с бэка и
+    никогда не принимаются от фронта:
+
+    - `attention_index` и факторы `s`, `c`, `t`, `a`;
+    - переход роли `student → observer` (только после завершения курса);
+    - достижение консенсуса по разметке;
+    - допуск на акцию (курс завершён + согласие родителя для 14–17);
+    - смена статуса участка.
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Локальная разработка
+  - url: https://api.kosmobereg.ru/api/v1
+    description: Продакшн
+
+tags:
+  - name: auth
+    description: Регистрация, вход, профиль (компонент C1)
+  - name: public
+    description: Доступно без авторизации — сценарий S1
+  - name: course
+    description: Обучающий контур (компонент C2) — сценарий S2
+  - name: segments
+    description: Участки береговой линии и приоритизация (компонент C6)
+  - name: annotations
+    description: Разметка снимков и консенсус (компонент C3) — сценарий S3
+  - name: moderation
+    description: Рабочее место сотрудника ООПТ — сценарий S4
+  - name: events
+    description: Акции, запись, допуск (компонент C4) — сценарий S5
+  - name: reports
+    description: Полевые отчёты (компонент C5) — сценарий S6
+  - name: media
+    description: Загрузка фото
+  - name: export
+    description: Выгрузка данных для отчётности ООПТ
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ==================== S1: первый контакт ====================
+
+  /public/trainer/task:
+    get:
+      tags: [public]
+      security: []
+      summary: Задание мини-тренажёра (без регистрации)
+      description: |
+        Сценарий S1. Возвращает пару разновременных сцен и служебные данные для
+        проверки клика. Эталонная зона (`truth`) отдаётся сразу, чтобы тренажёр
+        работал без второго запроса — это обучающий, а не оценочный контур.
+      responses:
+        '200':
+          description: Задание
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainerTask' }
+
+  /public/stats:
+    get:
+      tags: [public]
+      security: []
+      summary: Публичная статистика для лендинга
+      responses:
+        '200':
+          description: Счётчики
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [segments_watched, segments_cleaned, observers_trained]
+                properties:
+                  segments_watched:  { type: integer, example: 152 }
+                  segments_cleaned:  { type: integer, example: 61 }
+                  observers_trained: { type: integer, example: 748 }
+
+  # ==================== Авторизация ====================
+
+  /auth/register:
+    post:
+      tags: [auth]
+      security: []
+      summary: Регистрация
+      description: |
+        Возраст определяет режим работы с персональными данными. При `age < 18`
+        сервер выставляет `is_minor: true`, закрывает профиль и требует согласие
+        родителя для любого офлайн-участия.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, age]
+              properties:
+                name:     { type: string, minLength: 1, maxLength: 100, example: "Аня" }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 8, format: password }
+                age:      { type: integer, minimum: 14, maximum: 120, example: 16 }
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '409':
+          description: Email уже занят
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Возраст меньше 14 — регистрация невозможна
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Вход
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Неверные учётные данные
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Текущий пользователь
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ==================== S2: обучение ====================
+
+  /course/modules:
+    get:
+      tags: [course]
+      summary: Модули курса «Школа наблюдателя Земли»
+      description: |
+        Возвращает структуру курса с ключами локализации. Текст теории и вопросов
+        живёт в словаре фронта (`course.m1.theory` и т. д.), бэк отдаёт только
+        порядок, идентификаторы и правильные ответы не отдаёт вовсе.
+      responses:
+        '200':
+          description: Список модулей
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CourseModule' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /course/progress:
+    get:
+      tags: [course]
+      summary: Прогресс по курсу
+      responses:
+        '200':
+          description: Прогресс
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CourseProgress' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /course/modules/{module_id}/answer:
+    post:
+      tags: [course]
+      summary: Ответ на практическое задание модуля
+      description: |
+        Проверка ответа **на сервере** — правильный вариант клиенту не отдаётся.
+        Модуль засчитывается только при верном ответе. Когда засчитан последний
+        модуль, сервер сам повышает роль до `observer` и выдаёт сертификат;
+        клиент узнаёт об этом из поля `role_changed_to`.
+      parameters:
+        - name: module_id
+          in: path
+          required: true
+          schema: { type: string, enum: [m1, m2, m3] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answer_index]
+              properties:
+                answer_index: { type: integer, minimum: 0, example: 1 }
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [correct, module_completed]
+                properties:
+                  correct:          { type: boolean }
+                  module_completed: { type: boolean }
+                  course_completed: { type: boolean, default: false }
+                  role_changed_to:
+                    type: string
+                    nullable: true
+                    enum: [observer, null]
+                    description: Не null только в момент завершения курса
+                  certificate_id:
+                    type: string
+                    nullable: true
+                    example: "КБ-2026-0417"
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Модуль не найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ==================== Участки и приоритизация ====================
+
+  /segments:
+    get:
+      tags: [segments]
+      summary: Участки береговой линии
+      description: |
+        Основной источник данных для карты и для кабинета ООПТ.
+        По умолчанию отсортированы по убыванию индекса внимания.
+      parameters:
+        - name: oopt_id
+          in: query
+          schema: { type: string }
+          description: Фильтр по территории
+        - name: status
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/SegmentStatus' }
+          style: form
+          explode: false
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [attention_desc, attention_asc, name]
+            default: attention_desc
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Список участков
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Segment' }
+                  total: { type: integer }
+
+  /segments/{segment_id}:
+    get:
+      tags: [segments]
+      summary: Карточка участка
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      responses:
+        '200':
+          description: Участок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SegmentDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /segments/{segment_id}/scenes:
+    get:
+      tags: [segments]
+      summary: Доступные снимки ДЗЗ по участку
+      description: |
+        Список разновременных сцен. `tile_url_template` подставляется в MapLibre
+        как источник растрового слоя. Дата съёмки обязательна к показу в интерфейсе —
+        пользователь должен понимать, что данные не в реальном времени.
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      responses:
+        '200':
+          description: Сцены, от новых к старым
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Scene' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /segments/{segment_id}/subscription:
+    put:
+      tags: [segments]
+      summary: Подписаться на участок
+      description: Механика повторного участия — уведомление при появлении нового снимка.
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      responses:
+        '204': { description: Подписка оформлена }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [segments]
+      summary: Отписаться от участка
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      responses:
+        '204': { description: Подписка снята }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ==================== S3: разметка ====================
+
+  /annotations/task:
+    get:
+      tags: [annotations]
+      summary: Получить задание на разметку
+      description: |
+        Доступно только роли `observer` и выше. Сервер выдаёт участок, который
+        пользователь ещё не размечал. Если заданий нет — 204.
+      responses:
+        '200':
+          description: Задание
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnnotationTask' }
+        '204': { description: Свободных заданий нет }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Курс не завершён — роль student не допускается к реальной разметке
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /annotations:
+    post:
+      tags: [annotations]
+      summary: Отправить разметку
+      description: |
+        Координаты — в нормализованных долях `[0..1]` относительно тайла, чтобы не
+        зависеть от размера отображения на клиенте.
+
+        Сервер пересчитывает фактор `C` с учётом репутации разметчика и,
+        при достижении порога консенсуса, ставит участок в очередь модерации ООПТ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [segment_id, verdict]
+              properties:
+                segment_id: { type: string }
+                verdict:    { $ref: '#/components/schemas/Verdict' }
+                marks:
+                  type: array
+                  description: Обязательно при verdict != none
+                  items: { $ref: '#/components/schemas/Mark' }
+      responses:
+        '201':
+          description: Разметка принята
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [votes, votes_required, consensus_reached]
+                properties:
+                  votes:             { type: integer, example: 3 }
+                  votes_required:    { type: integer, example: 3 }
+                  consensus_reached: { type: boolean }
+                  queued_for_moderation: { type: boolean }
+                  segment:           { $ref: '#/components/schemas/Segment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Пользователь уже размечал этот участок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ==================== S4: кабинет ООПТ ====================
+
+  /moderation/segments:
+    get:
+      tags: [moderation]
+      summary: Очередь модерации разметки
+      description: Только роль `oopt_staff`, только в границах своей территории.
+      responses:
+        '200':
+          description: Участки, достигшие консенсуса
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ModerationItem' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /moderation/segments/{segment_id}:
+    post:
+      tags: [moderation]
+      summary: Решение по участку
+      description: |
+        `approve` переводит участок в статус `work` и повышает репутацию
+        разметчиков. `reject` снижает фактор `C`, репутацию и убирает участок
+        из очереди. Решение пишется в неизменяемый аудит-лог.
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                comment:  { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Решение применено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Segment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /moderation/reports:
+    get:
+      tags: [moderation]
+      summary: Очередь модерации полевых отчётов
+      responses:
+        '200':
+          description: Отчёты на проверке
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FieldReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /moderation/reports/{report_id}:
+    post:
+      tags: [moderation]
+      summary: Решение по отчёту
+      description: |
+        `approve` замыкает цикл: статус участка → `clean`, фактор `T` обнуляется,
+        `C` и `S` снижаются, индекс внимания пересчитывается, волонтёру
+        начисляются часы через интеграцию с ДОБРО.РФ.
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                comment:  { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Решение применено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report:  { $ref: '#/components/schemas/FieldReport' }
+                  segment: { $ref: '#/components/schemas/Segment' }
+                  hours_awarded: { type: number, example: 4 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ==================== S5: акции ====================
+
+  /events:
+    get:
+      tags: [events]
+      summary: Список акций
+      parameters:
+        - name: segment_id
+          in: query
+          schema: { type: string }
+        - name: upcoming_only
+          in: query
+          schema: { type: boolean, default: true }
+      responses:
+        '200':
+          description: Акции
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+    post:
+      tags: [events]
+      summary: Создать акцию
+      description: |
+        Только роль `oopt_staff`. Волонтёр не может назначить выход на охраняемую
+        территорию — это требование режима ООПТ. Роль `ambassador` может подать
+        заявку, но она требует подтверждения сотрудником.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [segment_id, starts_at, capacity]
+              properties:
+                segment_id: { type: string }
+                starts_at:  { type: string, format: date-time }
+                capacity:   { type: integer, minimum: 1, maximum: 500, example: 25 }
+                meeting_point: { type: string, maxLength: 300 }
+      responses:
+        '201':
+          description: Акция создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422':
+          description: Участок не подтверждён — акцию создать нельзя
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /events/{event_id}/enrollment:
+    post:
+      tags: [events]
+      summary: Записаться на акцию
+      description: |
+        Сервер возвращает список **невыполненных условий допуска** в
+        `blocking_requirements`. Фронт по нему решает, какой экран показать
+        дальше: согласие родителя или инструктаж.
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '201':
+          description: Запись создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Мест нет или уже записан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /events/{event_id}/consent:
+    post:
+      tags: [events]
+      summary: Запросить согласие законного представителя
+      description: |
+        Только для `is_minor: true`. Сервер отправляет ссылку на подписание.
+        До подтверждения допуск закрыт — проверка выполняется на сервере
+        и не может быть обойдена с клиента.
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parent_contact]
+              properties:
+                parent_contact:
+                  type: string
+                  description: Email или телефон родителя
+      responses:
+        '202':
+          description: Запрос отправлен, ожидается подтверждение
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /events/{event_id}/briefing:
+    post:
+      tags: [events]
+      summary: Подтвердить прохождение инструктажа
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Инструктаж засчитан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ==================== S6: полевой отчёт ====================
+
+  /reports:
+    post:
+      tags: [reports]
+      summary: Создать черновик отчёта (фото «до»)
+      description: |
+        Шаг 1 сценария S6. Фото «до» обязано быть сделано **до начала уборки** —
+        сервер проверяет `taken_at` относительно времени начала акции.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, photo_before]
+              properties:
+                event_id:     { type: string, format: uuid }
+                photo_before: { $ref: '#/components/schemas/PhotoRef' }
+      responses:
+        '201':
+          description: Черновик создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FieldReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422':
+          description: Нет геометки, времени съёмки или допуск не оформлен
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /reports/{report_id}:
+    patch:
+      tags: [reports]
+      summary: Дополнить и отправить отчёт (фото «после»)
+      description: Шаг 2 сценария S6. Отправка переводит отчёт в статус `pending`.
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photo_after: { $ref: '#/components/schemas/PhotoRef' }
+                volume_kg:   { type: number, minimum: 0, example: 145 }
+                comment:     { type: string, maxLength: 1000 }
+                submit:      { type: boolean, default: false, description: true — отправить на модерацию }
+      responses:
+        '200':
+          description: Отчёт обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FieldReport' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ==================== Медиа ====================
+
+  /media/upload:
+    post:
+      tags: [media]
+      summary: Загрузить фото
+      description: |
+        Возвращает ключ в объектном хранилище. Геометка и время берутся из EXIF,
+        а если их нет — принимаются явными полями формы (офлайн-режим PWA).
+
+        Все загруженные фото проходят модерацию до публикации. Для пользователей
+        14–17 точная геолокация не публикуется — в публичных слоях она
+        огрубляется до участка.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:     { type: string, format: binary }
+                lat:      { type: number, description: Если EXIF отсутствует }
+                lon:      { type: number }
+                taken_at: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Файл загружен
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PhotoRef' }
+        '413':
+          description: Файл слишком большой (лимит 15 МБ)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ==================== Экспорт ====================
+
+  /export/segments:
+    get:
+      tags: [export]
+      summary: Выгрузка участков для отчётности ООПТ
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema: { type: string, enum: [geojson, csv] }
+      responses:
+        '200':
+          description: Файл выгрузки
+          content:
+            application/geo+json: { schema: { type: object } }
+            text/csv:             { schema: { type: string } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+# ============================================================
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    SegmentId:
+      name: segment_id
+      in: path
+      required: true
+      schema: { type: string, example: ustie }
+    EventId:
+      name: event_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Роль не позволяет выполнить операцию
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      required: [code, message_key]
+      properties:
+        code:
+          type: string
+          example: consent_required
+          description: Машинный код ошибки
+        message_key:
+          type: string
+          example: err.consent_required
+          description: Ключ локализации для i18n.js — текст берётся из словаря фронта
+        details:
+          type: object
+          additionalProperties: true
+
+    Role:
+      type: string
+      enum: [guest, student, observer, ambassador, oopt_staff, admin]
+      description: |
+        * `guest` — без регистрации, только тренажёр и публичная карта
+        * `student` — зарегистрирован, курс не завершён; **разметка не идёт в очередь ООПТ**
+        * `observer` — курс завершён, доступны реальная разметка и акции
+        * `ambassador` — активное ядро, может подавать заявки на акции
+        * `oopt_staff` — сотрудник ООПТ, только своя территория
+        * `admin` — команда проекта
+
+    SegmentStatus:
+      type: string
+      enum: [problem, work, clean, watch]
+      description: |
+        * `problem` — выявлена проблема
+        * `work` — подтверждён инспектором, в работе
+        * `clean` — уборка подтверждена
+        * `watch` — под наблюдением
+
+    Verdict:
+      type: string
+      enum: [dump, litter, none]
+      description: dump — скопление отходов, litter — общая замусоренность, none — проблемы нет
+
+    User:
+      type: object
+      required: [id, name, role, is_minor, reputation]
+      properties:
+        id:         { type: string, format: uuid }
+        name:       { type: string, example: "Аня" }
+        role:       { $ref: '#/components/schemas/Role' }
+        is_minor:   { type: boolean, description: true при возрасте 14–17 }
+        reputation: { type: number, format: float, minimum: 0, maximum: 1.5, example: 1.0 }
+        volunteer_hours: { type: number, example: 4 }
+        certificate_id:  { type: string, nullable: true, example: "КБ-2026-0417" }
+        oopt_id:         { type: string, nullable: true, description: Только для oopt_staff }
+        annotations_count: { type: integer, example: 8 }
+
+    AuthResponse:
+      type: object
+      required: [access_token, token_type, user]
+      properties:
+        access_token: { type: string }
+        token_type:   { type: string, enum: [bearer] }
+        expires_in:   { type: integer, example: 3600 }
+        user:         { $ref: '#/components/schemas/User' }
+
+    AttentionFactors:
+      type: object
+      description: |
+        Факторы индекса внимания. Индекс = 0.40·S + 0.30·C + 0.20·T + 0.10·A.
+        Вычисляется сервером, от клиента не принимается.
+      required: [s, c, t, a]
+      properties:
+        s: { type: number, format: float, minimum: 0, maximum: 1, description: Сигнал ДЗЗ }
+        c: { type: number, format: float, minimum: 0, maximum: 1, description: Консенсус людей }
+        t: { type: number, format: float, minimum: 0, maximum: 1, description: Давность проверки }
+        a: { type: number, format: float, minimum: 0, maximum: 1, description: Доступность участка }
+
+    Segment:
+      type: object
+      required: [id, name_key, status, attention_index, factors]
+      properties:
+        id:       { type: string, example: ustie }
+        name_key:
+          type: string
+          example: seg.ustie.name
+          description: Ключ локализации — фронт переводит через i18n.js
+        oopt_id:  { type: string, example: sinie-ozera }
+        length_km: { type: number, example: 2.4 }
+        status:   { $ref: '#/components/schemas/SegmentStatus' }
+        attention_index:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 77
+          description: Готовое к показу значение 0–100
+        factors:  { $ref: '#/components/schemas/AttentionFactors' }
+        votes:          { type: integer, example: 3 }
+        votes_required: { type: integer, example: 3 }
+        verified:       { type: boolean }
+        last_verified_at: { type: string, format: date-time, nullable: true }
+        is_subscribed:  { type: boolean, description: Подписан ли текущий пользователь }
+
+    SegmentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Segment'
+        - type: object
+          properties:
+            geometry:
+              type: object
+              description: GeoJSON LineString или Polygon
+            history:
+              type: array
+              items:
+                type: object
+                required: [at, event_key]
+                properties:
+                  at:        { type: string, format: date-time }
+                  event_key: { type: string, example: history.cleaned }
+                  vars:      { type: object, additionalProperties: true }
+
+    Scene:
+      type: object
+      required: [id, captured_at, source, tile_url_template]
+      properties:
+        id:          { type: string }
+        captured_at: { type: string, format: date }
+        source:
+          type: string
+          enum: [resurs-p, kanopus-v, sentinel-2, uav]
+          description: Источник данных — обязателен к показу в интерфейсе
+        resolution_m: { type: number, example: 1.0 }
+        cloud_cover:  { type: number, minimum: 0, maximum: 1, example: 0.05 }
+        tile_url_template:
+          type: string
+          example: "https://tiles.kosmobereg.ru/scenes/{scene_id}/{z}/{x}/{y}.png"
+
+    TrainerTask:
+      type: object
+      required: [scene_before, scene_after, truth]
+      properties:
+        segment_id:   { type: string }
+        scene_before: { $ref: '#/components/schemas/Scene' }
+        scene_after:  { $ref: '#/components/schemas/Scene' }
+        truth:
+          type: object
+          description: Эталонная зона в долях [0..1] и допуск попадания
+          required: [x, y, radius]
+          properties:
+            x:      { type: number, example: 0.625 }
+            y:      { type: number, example: 0.369 }
+            radius: { type: number, example: 0.12 }
+
+    Mark:
+      type: object
+      required: [x, y]
+      description: Отметка в нормализованных долях тайла [0..1]
+      properties:
+        x: { type: number, minimum: 0, maximum: 1 }
+        y: { type: number, minimum: 0, maximum: 1 }
+        r: { type: number, minimum: 0, maximum: 1, description: Радиус зоны, если выделена область }
+
+    AnnotationTask:
+      type: object
+      required: [segment_id, name_key, scene_before, scene_after]
+      properties:
+        segment_id:   { type: string }
+        name_key:     { type: string }
+        scene_before: { $ref: '#/components/schemas/Scene' }
+        scene_after:  { $ref: '#/components/schemas/Scene' }
+        votes:          { type: integer, description: Сколько разметок уже есть }
+        votes_required: { type: integer }
+
+    ModerationItem:
+      type: object
+      required: [segment, annotations_count]
+      properties:
+        segment:           { $ref: '#/components/schemas/Segment' }
+        annotations_count: { type: integer }
+        agreement:
+          type: number
+          format: float
+          description: Доля согласия разметчиков, 0..1
+        marks_heatmap:
+          type: array
+          description: Агрегированные отметки для показа инспектору
+          items: { $ref: '#/components/schemas/Mark' }
+        queued_at: { type: string, format: date-time }
+
+    CourseModule:
+      type: object
+      required: [id, order, title_key, theory_key, question_key, options_count]
+      properties:
+        id:            { type: string, enum: [m1, m2, m3] }
+        order:         { type: integer }
+        title_key:     { type: string, example: course.m1.title }
+        theory_key:    { type: string, example: course.m1.theory }
+        question_key:  { type: string, example: course.m1.q }
+        options_count: { type: integer, example: 3, description: Тексты вариантов — в словаре фронта }
+        duration_min:  { type: integer, example: 6 }
+
+    CourseProgress:
+      type: object
+      required: [completed_modules, total_modules, course_completed]
+      properties:
+        completed_modules: { type: array, items: { type: string } }
+        total_modules:     { type: integer, example: 3 }
+        course_completed:  { type: boolean }
+        started_at:        { type: string, format: date-time, nullable: true }
+        completed_at:      { type: string, format: date-time, nullable: true }
+        certificate_id:    { type: string, nullable: true }
+
+    Event:
+      type: object
+      required: [id, segment_id, starts_at, capacity, enrolled_count, status]
+      properties:
+        id:             { type: string, format: uuid }
+        segment_id:     { type: string }
+        segment_name_key: { type: string }
+        starts_at:      { type: string, format: date-time }
+        capacity:       { type: integer }
+        enrolled_count: { type: integer }
+        meeting_point:  { type: string }
+        status:         { type: string, enum: [planned, active, finished, cancelled] }
+        organizer_oopt_id: { type: string }
+        is_my_segment:
+          type: boolean
+          description: |
+            true, если текущий пользователь сам размечал этот участок.
+            Фронт использует это для механики персональной привязки —
+            ключевого перехода «онлайн → поле».
+
+    Enrollment:
+      type: object
+      required: [event_id, status, blocking_requirements]
+      properties:
+        event_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [pending_requirements, ready, attended, cancelled]
+        blocking_requirements:
+          type: array
+          description: Что осталось выполнить для допуска — фронт ведёт пользователя по этому списку
+          items:
+            type: string
+            enum: [course_completion, parent_consent, briefing]
+        consent_status:
+          type: string
+          nullable: true
+          enum: [not_required, requested, signed]
+        briefing_completed_at: { type: string, format: date-time, nullable: true }
+
+    PhotoRef:
+      type: object
+      required: [key]
+      properties:
+        key:      { type: string, example: "reports/2026/05/a1b2c3.jpg" }
+        url:      { type: string, format: uri, description: Подписанная ссылка на чтение }
+        lat:      { type: number, nullable: true }
+        lon:      { type: number, nullable: true }
+        taken_at: { type: string, format: date-time, nullable: true }
+        has_geotag: { type: boolean }
+
+    FieldReport:
+      type: object
+      required: [id, segment_id, status]
+      properties:
+        id:         { type: string, format: uuid }
+        event_id:   { type: string, format: uuid }
+        segment_id: { type: string }
+        segment_name_key: { type: string }
+        author_name: { type: string, description: Для 14–17 — только имя и первая буква фамилии }
+        photo_before: { $ref: '#/components/schemas/PhotoRef' }
+        photo_after:  { $ref: '#/components/schemas/PhotoRef' }
+        volume_kg:  { type: number, nullable: true }
+        comment:    { type: string, nullable: true }
+        status:     { type: string, enum: [draft, pending, approved, rejected] }
+        submitted_at: { type: string, format: date-time, nullable: true }
+        moderated_at: { type: string, format: date-time, nullable: true }

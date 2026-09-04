@@ -1,0 +1,30 @@
+# зависимости
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# секреты — никогда не коммитим
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# сборка
+dist/
+build/
+*.egg-info/
+
+# среда разработки
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# данные
+*.sqlite3
+*.db
+media/
+uploads/

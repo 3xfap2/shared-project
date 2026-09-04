@@ -1,0 +1,7 @@
+services:
+  prototype:
+    build: ./prototype
+    container_name: kosmobereg-prototype
+    ports:
+      - "8080:80"
+    restart: unless-stopped
