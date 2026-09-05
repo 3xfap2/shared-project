@@ -67,6 +67,11 @@ tags:
     description: Загрузка фото
   - name: imagery
     description: Заявки на новую съёмку ДЗЗ — двусторонняя связь с оператором
+  - name: games
+    description: |
+      Игровой контур. Игры не приделаны сбоку — они дают соревновательную
+      форму тому действию, которое и так составляет суть продукта. Ход
+      в дуэли становится настоящей разметкой и уходит в общий консенсус.
   - name: export
     description: Выгрузка данных для отчётности ООПТ
 
@@ -319,6 +324,33 @@ paths:
           in: query
           schema: { type: string }
           description: Фильтр по территории
+        - name: region
+          in: query
+          schema: { type: string }
+          description: Фильтр по региону территории
+        - name: incident
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Verdict' }
+          style: form
+          explode: false
+          description: |
+            Тип происшествия. Отделён от статуса намеренно: свалка и общая
+            замусоренность требуют разных бригад и разной техники, инспектор
+            ищет их по отдельности.
+        - name: growing
+          in: query
+          schema: { type: boolean }
+          description: Только участки с растущей аномалией
+        - name: bbox
+          in: query
+          schema: { type: string }
+          example: "29.8,61.0,30.4,61.4"
+          description: |
+            Видимая область карты — minLon,minLat,maxLon,maxLat. Отсекает
+            участки за пределами экрана. Некорректное значение возвращает
+            422 с кодом, начинающимся на bbox_.
         - name: status
           in: query
           schema:
@@ -1002,6 +1034,165 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  # ==================== Игровой контур ====================
+
+  /games/duels/join:
+    post:
+      tags: [games]
+      summary: Найти соперника или создать дуэль
+      description: |
+        Подбор асинхронный: сначала ищем открытую дуэль другого игрока,
+        иначе создаём свою и ждём соперника. Реального времени нет
+        намеренно — иначе игра работала бы только в час пик.
+
+        Участок выдаётся из тех, что игрок ещё не размечал: иначе он
+        вспомнит собственный прошлый ответ, и независимости не будет.
+      responses:
+        '201':
+          description: Дуэль найдена или создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Duel' }
+        '403':
+          description: Курс не завершён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Нет доступных участков для дуэли
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /games/duels/{duel_id}:
+    get:
+      tags: [games]
+      summary: Состояние дуэли
+      description: |
+        Ход соперника не раскрывается, пока игрок не сходил сам.
+        Поля opponent_score и agreed заполняются только после завершения —
+        иначе игра превращается в списывание, а разметки теряют
+        независимость и вместе с ней ценность для консенсуса.
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          description: Состояние дуэли
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Duel' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /games/duels/{duel_id}/move:
+    post:
+      tags: [games]
+      summary: Сделать ход
+      description: |
+        Ход одновременно является обычной разметкой и уходит в тот же
+        консенсус. Игра не создаёт параллельного контура данных — иначе
+        игровым ответам пришлось бы доверять меньше.
+
+        Поле elapsed_ms влияет только на бонус за скорость и не может дать
+        больше очков, чем согласие с соперником: игра, где выигрывает самый
+        быстрый, учила бы щёлкать не глядя.
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DuelMove' }
+      responses:
+        '200':
+          description: Ход принят
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Duel' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Ход уже сделан или дуэль завершена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /games/inspector/case:
+    get:
+      tags: [games]
+      summary: Случай на разбор
+      description: |
+        Участок с уже вынесенным решением инспектора. Настоящее решение
+        в ответе отсутствует — оно откроется после ответа игрока.
+
+        Игра не создаёт новых данных и не меняет состояние участка.
+      responses:
+        '200':
+          description: Карточка на разбор
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InspectorCase' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Разобранных случаев пока нет
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /games/inspector/answer:
+    post:
+      tags: [games]
+      summary: Ответ игрока и настоящее решение инспектора
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [segment_id, decision]
+              properties:
+                segment_id: { type: string }
+                decision:   { $ref: '#/components/schemas/ModerationDecision' }
+      responses:
+        '201':
+          description: Результат с раскрытием настоящего решения
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InspectorResult' }
+        '409':
+          description: Этот случай игрок уже разбирал
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /games/stats:
+    get:
+      tags: [games]
+      summary: Моя игровая статистика
+      responses:
+        '200':
+          description: Статистика
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GameStats' }
+
+  /games/leaderboard:
+    get:
+      tags: [games]
+      summary: Рейтинг игроков
+      description: |
+        Имена пользователей 14–17 заменены псевдонимом: профили
+        несовершеннолетних закрыты, и рейтинг не повод их раскрывать.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Рейтинг
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Leaderboard' }
+
   # ==================== Экспорт ====================
 
   /export/segments:
@@ -1037,6 +1228,11 @@ components:
       in: path
       required: true
       schema: { type: string, example: ustie }
+    DuelId:
+      name: duel_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     EventId:
       name: event_id
       in: path
@@ -1528,3 +1724,130 @@ components:
     SceneSource:
       type: string
       enum: [resurs-p, kanopus-v, sentinel-2, uav]
+
+    # ---------- Игровой контур ----------
+
+    DuelStatus:
+      type: string
+      enum: [open, active, finished, expired]
+      description: |
+        open — ждём соперника, active — оба зашли, finished — очки посчитаны,
+        expired — соперник не нашёлся за отведённое время.
+
+    Duel:
+      type: object
+      required: [id, status, segment_id, name_key]
+      properties:
+        id:         { type: string, format: uuid }
+        status:     { $ref: '#/components/schemas/DuelStatus' }
+        segment_id: { type: string }
+        name_key:   { type: string }
+        scene_before: { $ref: '#/components/schemas/Scene' }
+        scene_after:  { $ref: '#/components/schemas/Scene' }
+        my_move_done:       { type: boolean }
+        opponent_joined:    { type: boolean }
+        opponent_move_done: { type: boolean }
+        my_score:
+          type: integer
+          nullable: true
+          description: Заполняется только после завершения дуэли
+        opponent_score:
+          type: integer
+          nullable: true
+          description: |
+            До завершения всегда null: очки соперника раскрыли бы его ход.
+        agreed:
+          type: boolean
+          nullable: true
+          description: Совпали ли вердикты. Заполняется после обоих ходов
+        result:
+          type: string
+          nullable: true
+          enum: [win, lose, draw, null]
+        finished_at: { type: string, format: date-time, nullable: true }
+
+    DuelMove:
+      type: object
+      required: [verdict, elapsed_ms]
+      properties:
+        verdict: { $ref: '#/components/schemas/Verdict' }
+        marks:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/Mark' }
+          description: Обязательны при вердикте о проблеме
+        elapsed_ms:
+          type: integer
+          minimum: 0
+          maximum: 3600000
+          description: |
+            Время хода по замеру клиента. Влияет только на бонус за скорость.
+            Заведомо невозможные значения бонуса не дают.
+
+    InspectorCase:
+      type: object
+      required: [segment_id, name_key, annotations_count, agreement, attention_index]
+      properties:
+        segment_id: { type: string }
+        name_key:   { type: string }
+        scene_before: { $ref: '#/components/schemas/Scene' }
+        scene_after:  { $ref: '#/components/schemas/Scene' }
+        annotations_count: { type: integer }
+        agreement: { type: number, format: float, minimum: 0, maximum: 1 }
+        marks_heatmap:
+          type: array
+          items: { $ref: '#/components/schemas/Mark' }
+        attention_index: { type: integer, minimum: 0, maximum: 100 }
+
+    InspectorResult:
+      type: object
+      required: [correct, player_decision, actual_decision, points, explanation_key, rounds_played]
+      properties:
+        correct:         { type: boolean }
+        player_decision: { $ref: '#/components/schemas/ModerationDecision' }
+        actual_decision: { $ref: '#/components/schemas/ModerationDecision' }
+        points:          { type: integer }
+        explanation_key:
+          type: string
+          example: game.inspector.why.approve
+          description: Ключ пояснения, почему инспектор решил именно так
+        accuracy:
+          type: number
+          format: float
+          nullable: true
+          description: null, пока раундов меньше пяти — как и точность разметки
+        rounds_played:   { type: integer }
+
+    GameStats:
+      type: object
+      required: [duels_played, duels_won, duel_points, inspector_rounds, inspector_correct, total_points]
+      properties:
+        duels_played:      { type: integer }
+        duels_won:         { type: integer }
+        duel_points:       { type: integer }
+        inspector_rounds:  { type: integer }
+        inspector_correct: { type: integer }
+        inspector_accuracy: { type: number, format: float, nullable: true }
+        total_points:      { type: integer }
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, display_name, points, duels_won]
+      properties:
+        rank: { type: integer }
+        display_name:
+          type: string
+          description: |
+            Для пользователей 14–17 — псевдоним вида «Наблюдатель #A1B2».
+        points:    { type: integer }
+        duels_won: { type: integer }
+
+    Leaderboard:
+      type: object
+      required: [entries, my_points]
+      properties:
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/LeaderboardEntry' }
+        my_rank:   { type: integer, nullable: true }
+        my_points: { type: integer }

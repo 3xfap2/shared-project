@@ -82,6 +82,18 @@ class Segment(Base, Timestamps):
     # GeoJSON LineString/Polygon. О переходе на PostGIS — см. db/base.py.
     geometry: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Центр участка отдельными колонками. Нужен для выборки по области
+    # карты: доставать геометрию из JSON и считать центр на каждый запрос
+    # означало бы полный перебор таблицы при каждом сдвиге карты.
+    #
+    # Это первый реальный пространственный запрос в проекте — тот самый
+    # случай, ради которого в db/base.py зарезервирован переход на PostGIS.
+    # Пока участков сотни, двух индексированных колонок достаточно; когда
+    # их станут десятки тысяч, здесь появится geometry(Point, 4326)
+    # с GiST-индексом, а интерфейс запроса не изменится.
+    center_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    center_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     status: Mapped[SegmentStatus] = mapped_column(
         Enum(SegmentStatus, native_enum=False, length=20),
         default=SegmentStatus.WATCH,
@@ -120,6 +132,15 @@ class Segment(Base, Timestamps):
         doc="Решение инспектора, служащее эталоном для контрольных заданий",
     )
 
+    # --- Тип происшествия ---
+    # Преобладающий вердикт разметчиков. Нужен карте для фильтра «по
+    # происшествию»: инспектор ищет не «проблемные участки вообще», а
+    # свалки отдельно от общей замусоренности — это разные бригады,
+    # разная техника и разный порядок действий.
+    incident_type: Mapped[Verdict | None] = mapped_column(
+        Enum(Verdict, native_enum=False, length=20), nullable=True
+    )
+
     # --- Динамика аномалии (детектор растущей свалки) ---
     # Основано на подтверждённом кейсе: по данным КА «Ресурс-П» фиксировался
     # именно РОСТ несанкционированной свалки у заповедника за 2017-2019.
@@ -148,6 +169,7 @@ class Segment(Base, Timestamps):
         # Главный индекс продукта: карта приоритетов в кабинете ООПТ.
         Index("ix_segments_oopt_attention", "oopt_id", "attention_index"),
         Index("ix_segments_status", "status"),
+        Index("ix_segments_incident", "incident_type"),
         CheckConstraint("factor_s >= 0 AND factor_s <= 1", name="factor_s_range"),
         CheckConstraint("factor_c >= 0 AND factor_c <= 1", name="factor_c_range"),
         CheckConstraint("factor_t >= 0 AND factor_t <= 1", name="factor_t_range"),

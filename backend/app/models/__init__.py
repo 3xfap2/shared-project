@@ -10,6 +10,7 @@ from app.models.audit import AuditLog
 from app.models.enums import (
     AuditAction,
     ConsentStatus,
+    DuelStatus,
     ImageryPriority,
     ImageryRequestStatus,
     EnrollmentStatus,
@@ -23,6 +24,7 @@ from app.models.enums import (
     Verdict,
 )
 from app.models.event import Consent, Enrollment, Event
+from app.models.game import Duel, DuelEntry, InspectorRound
 from app.models.imagery import ImageryRequest
 from app.models.geo import Oopt, Scene, Segment
 from app.models.learning import CourseProgress
@@ -35,10 +37,13 @@ __all__ = [
     "AuditLog",
     "Consent",
     "CourseProgress",
+    "Duel",
+    "DuelEntry",
     "Enrollment",
     "Event",
     "FieldReport",
     "ImageryRequest",
+    "InspectorRound",
     "Media",
     "Oopt",
     "Scene",
@@ -48,6 +53,7 @@ __all__ = [
     # Перечисления
     "AuditAction",
     "ConsentStatus",
+    "DuelStatus",
     "EnrollmentStatus",
     "EventStatus",
     "ImageryPriority",

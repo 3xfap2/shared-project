@@ -3,9 +3,10 @@
 Заполняет базу территорией, участками и снимками, чтобы систему можно было
 запустить и сразу пройти сценарий S1 → S6 без ручной подготовки.
 
-Значения факторов совпадают с эталонным прототипом: участок «Устье реки
-Каменки» после консенсуса даёт индекс 77, после подтверждённой уборки — 41.
-Это делает бэкенд и прототип взаимно проверяемыми.
+Значения факторов совпадают с прототипом: участок «Устье реки Каменки»
+даёт индекс 71 в исходном состоянии, 85 после консенсуса трёх разметчиков
+и 48 после подтверждённой уборки. Те же числа проверяют
+`tests/test_cross_check.py` и `prototype/e2e-check.js`.
 
 Запуск:  python -m app.db.seed
 """
@@ -31,14 +32,17 @@ log = logging.getLogger("seed")
 
 OOPT_ID = "sinie-ozera"
 
-# (id, S, C, A, статус, дней с последней проверки, длина км)
+# (id, S, C, A, статус, дней с последней проверки, длина км, широта, долгота)
+# Координаты демонстрационные, но правдоподобные для Карельского
+# перешейка: карта должна открываться на осмысленном месте, а фильтр
+# по области экрана — реально что-то отсекать.
 SEGMENTS = [
-    ("ustie",   0.82, 0.55, 0.80, SegmentStatus.PROBLEM, 255, 2.4),
-    ("kosa",    0.61, 0.40, 0.60, SegmentStatus.PROBLEM, 200, 1.1),
-    ("zaliv",   0.34, 0.20, 0.45, SegmentStatus.WATCH,   128, 3.0),
-    ("mys",     0.55, 0.15, 0.25, SegmentStatus.WATCH,   292, 0.8),
-    ("plyazh",  0.22, 0.10, 0.90, SegmentStatus.CLEAN,    73, 1.6),
-    ("starica", 0.48, 0.30, 0.35, SegmentStatus.WATCH,   219, 2.2),
+    ("ustie",   0.82, 0.55, 0.80, SegmentStatus.PROBLEM, 255, 2.4, 61.243, 30.112),
+    ("kosa",    0.61, 0.40, 0.60, SegmentStatus.PROBLEM, 200, 1.1, 61.287, 30.061),
+    ("zaliv",   0.34, 0.20, 0.45, SegmentStatus.WATCH,   128, 3.0, 61.198, 30.204),
+    ("mys",     0.55, 0.15, 0.25, SegmentStatus.WATCH,   292, 0.8, 61.331, 30.297),
+    ("plyazh",  0.22, 0.10, 0.90, SegmentStatus.CLEAN,    73, 1.6, 61.164, 29.998),
+    ("starica", 0.48, 0.30, 0.35, SegmentStatus.WATCH,   219, 2.2, 61.302, 30.415),
 ]
 
 # Демо-аккаунты. Пароли заведомо простые — это сиды для локального запуска,
@@ -72,19 +76,21 @@ async def seed() -> None:
             Oopt(
                 id=OOPT_ID,
                 name_key="oopt.sinie_ozera.name",
-                region="Демонстрационный регион",
+                region="Ленинградская область",
                 boundary={"type": "Polygon", "coordinates": []},
             )
         )
         await s.flush()
 
-        for sid, fs, fc, fa, status, days, km in SEGMENTS:
+        for sid, fs, fc, fa, status, days, km, lat, lon in SEGMENTS:
             segment = Segment(
                 id=sid,
                 oopt_id=OOPT_ID,
                 name_key=f"seg.{sid}.name",
                 length_km=km,
                 status=status,
+                center_lat=lat,
+                center_lon=lon,
                 factor_s=fs,
                 factor_c=fc,
                 factor_a=fa,

@@ -15,6 +15,7 @@ from app.api.v1 import (
     course,
     events,
     export,
+    games,
     imagery,
     moderation,
     public,
@@ -85,6 +86,7 @@ api.include_router(events.router)
 api.include_router(reports.router)
 api.include_router(imagery.router)
 api.include_router(export.router)
+api.include_router(games.router)
 app.include_router(api)
 
 

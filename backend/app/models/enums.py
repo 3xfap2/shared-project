@@ -90,6 +90,19 @@ class ModerationDecision(StrEnum):
     REJECT = "reject"
 
 
+class DuelStatus(StrEnum):
+    """Состояние дуэли разметчиков.
+
+    Подбор асинхронный: `open` — ждём соперника, `active` — оба зашли,
+    но не все походили, `finished` — оба сходили и очки посчитаны.
+    """
+
+    OPEN = "open"
+    ACTIVE = "active"
+    FINISHED = "finished"
+    EXPIRED = "expired"      # соперник не нашёлся за отведённое время
+
+
 class ImageryRequestStatus(StrEnum):
     """Жизненный цикл заявки на новую съёмку.
 

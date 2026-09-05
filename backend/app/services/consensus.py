@@ -90,6 +90,26 @@ def evaluate(annotations: Iterable[Annotation]) -> ConsensusResult:
     )
 
 
+def prevailing_verdict(annotations: Iterable[Annotation]) -> Verdict | None:
+    """Какой тип происшествия видит большинство, с учётом репутации.
+
+    Нужен карте: инспектор ищет свалки отдельно от общей замусоренности —
+    это разные бригады и разная техника. Контрольные разметки исключаем,
+    они в решении по участку не участвовали.
+
+    None, если размечавших нет вовсе.
+    """
+    weights: dict[Verdict, float] = {}
+    for a in annotations:
+        if a.is_control:
+            continue
+        weights[a.verdict] = weights.get(a.verdict, 0.0) + max(a.weight, 0.0)
+
+    if not weights:
+        return None
+    return max(weights, key=weights.__getitem__)
+
+
 def adjust_reputation(current: float, *, approved: bool) -> float:
     """Новое значение репутации после решения модератора.
 

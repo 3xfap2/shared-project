@@ -9,9 +9,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.core import errors
+from app.core.config import settings
 from app.core.deps import CurrentUser, OptionalUser, SessionDep, require_roles
-from app.models.enums import Role, SegmentStatus
-from app.models.geo import Scene, Segment
+from app.models.enums import Role, SegmentStatus, Verdict
+from app.models.geo import Oopt, Scene, Segment
 from app.models.user import Subscription
 from app.schemas.common import Page
 from app.schemas.geo import (
@@ -24,6 +25,26 @@ from app.schemas.geo import (
 from app.services import attention, growth
 
 router = APIRouter(prefix="/segments", tags=["segments"])
+
+
+def _parse_bbox(raw: str) -> tuple[float, float, float, float]:
+    """Разобрать область карты. Кривой bbox — ошибка клиента, а не сервера."""
+    parts = raw.split(",")
+    if len(parts) != 4:
+        raise errors.unprocessable("bbox_malformed", expected="minLon,minLat,maxLon,maxLat")
+    try:
+        min_lon, min_lat, max_lon, max_lat = (float(p) for p in parts)
+    except ValueError as exc:
+        raise errors.unprocessable("bbox_not_numeric") from exc
+
+    if not (-180 <= min_lon <= 180 and -180 <= max_lon <= 180):
+        raise errors.unprocessable("bbox_lon_out_of_range")
+    if not (-90 <= min_lat <= 90 and -90 <= max_lat <= 90):
+        raise errors.unprocessable("bbox_lat_out_of_range")
+    if min_lon > max_lon or min_lat > max_lat:
+        raise errors.unprocessable("bbox_inverted")
+
+    return min_lon, min_lat, max_lon, max_lat
 
 
 async def _subscribed_ids(session, user) -> set[str]:
@@ -40,8 +61,26 @@ async def list_segments(
     session: SessionDep,
     user: OptionalUser,
     oopt_id: Annotated[str | None, Query()] = None,
+    region: Annotated[str | None, Query(description="Регион территории")] = None,
     status_filter: Annotated[
         list[SegmentStatus] | None, Query(alias="status")
+    ] = None,
+    incident: Annotated[
+        list[Verdict] | None,
+        Query(description="Тип происшествия: dump, litter"),
+    ] = None,
+    growing: Annotated[
+        bool | None, Query(description="Только участки с растущей аномалией")
+    ] = None,
+    bbox: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Видимая область карты: minLon,minLat,maxLon,maxLat. "
+                "Отсекает участки за пределами экрана"
+            ),
+            examples=["29.8,61.0,30.4,61.4"],
+        ),
     ] = None,
     sort: Annotated[
         Literal["attention_desc", "attention_asc", "name"], Query()
@@ -53,16 +92,43 @@ async def list_segments(
 
     По умолчанию сортировка по убыванию индекса внимания — это и есть
     карта приоритетов, главный экран инспектора.
+
+    Фильтры складываются: «свалки в Ленинградской области, которые растут,
+    в видимой части карты» — один запрос. Тип происшествия отделён от
+    статуса намеренно: свалка и общая замусоренность требуют разных бригад
+    и разной техники, инспектор ищет их по отдельности.
     """
     query = select(Segment)
     count_query = select(func.count()).select_from(Segment)
 
+    def both(condition):
+        nonlocal query, count_query
+        query = query.where(condition)
+        count_query = count_query.where(condition)
+
     if oopt_id:
-        query = query.where(Segment.oopt_id == oopt_id)
-        count_query = count_query.where(Segment.oopt_id == oopt_id)
+        both(Segment.oopt_id == oopt_id)
+    if region:
+        # Регион хранится у территории, а не у участка: дублировать его
+        # в каждом участке значило бы чинить рассинхрон при переименовании.
+        both(Segment.oopt_id.in_(select(Oopt.id).where(Oopt.region == region)))
     if status_filter:
-        query = query.where(Segment.status.in_(status_filter))
-        count_query = count_query.where(Segment.status.in_(status_filter))
+        both(Segment.status.in_(status_filter))
+    if incident:
+        both(Segment.incident_type.in_(incident))
+    if growing is not None:
+        threshold = settings.GROWTH_ALERT_THRESHOLD
+        both(
+            Segment.growth_rate >= threshold
+            if growing
+            else (
+                Segment.growth_rate.is_(None) | (Segment.growth_rate < threshold)
+            )
+        )
+    if bbox:
+        min_lon, min_lat, max_lon, max_lat = _parse_bbox(bbox)
+        both(Segment.center_lat.between(min_lat, max_lat))
+        both(Segment.center_lon.between(min_lon, max_lon))
 
     order = {
         "attention_desc": Segment.attention_index.desc(),

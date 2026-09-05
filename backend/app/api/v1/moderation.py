@@ -53,18 +53,9 @@ VOLUNTEER_HOURS_PER_REPORT = 4.0
 
 
 def _prevailing_verdict(segment) -> Verdict:
-    """Преобладающий вердикт разметчиков — эталон при подтверждении.
-
-    Контрольные разметки исключаем: они не участвовали в решении.
-    """
-    counts: dict[Verdict, float] = {}
-    for a in segment.annotations:
-        if a.is_control:
-            continue
-        counts[a.verdict] = counts.get(a.verdict, 0.0) + max(a.weight, 0.0)
-    if not counts:
-        return Verdict.NONE
-    return max(counts, key=counts.__getitem__)
+    """Эталон при подтверждении. Обёртка над общим помощником: если
+    размечавших не осталось, считаем, что проблемы нет."""
+    return consensus.prevailing_verdict(segment.annotations) or Verdict.NONE
 
 
 def _check_territory(staff: User, oopt_id: str) -> None:

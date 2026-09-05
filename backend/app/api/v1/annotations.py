@@ -170,16 +170,23 @@ async def create_annotation(
             segment=neutral,
         )
 
-    rows = await session.execute(
-        select(Annotation).where(
-            Annotation.segment_id == segment.id,
-            Annotation.is_control.is_(False),
-        )
+    annotations = list(
+        (
+            await session.execute(
+                select(Annotation).where(
+                    Annotation.segment_id == segment.id,
+                    Annotation.is_control.is_(False),
+                )
+            )
+        ).scalars().all()
     )
-    result = consensus.evaluate(rows.scalars().all())
+    result = consensus.evaluate(annotations)
 
     segment.votes = result.votes
     segment.factor_c = result.factor_c
+    # Тип происшествия — для фильтра карты. Обновляем вместе с консенсусом,
+    # чтобы он всегда отражал текущее мнение разметчиков.
+    segment.incident_type = consensus.prevailing_verdict(annotations)
 
     queued_now = False
     if result.reached and segment.queued_at is None:
