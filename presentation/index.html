@@ -3,268 +3,252 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>КОСМОБЕРЕГ — презентация</title>
+<title>КОСМОБЕРЕГ — защита проекта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
+/* Визуальная система взята из макета фронта Kosmobereg.dc.html:
+   презентация и продукт должны выглядеть как одна вещь. */
 :root{
-  --bg:#070b18; --panel:#121a2e; --panel2:#18223a; --line:#253150;
-  --text:#e8edf7; --muted:#8f9cba; --accent:#4da3ff; --accent2:#7c5cff;
-  --ok:#3ddc97; --warn:#ffb454; --danger:#ff6b6b;
+  --bg:#fbfcfa; --ink:#14201a; --muted:#5f6f66; --faint:#8b988f;
+  --accent:#1f7a4d; --accent-dark:#1c5c3a; --line:#e3e9e4;
+  --tint:#eef3ef; --tint-2:#f2f9f4; --tint-3:#cfe3d6;
+  --blue:#3b5f8a; --warm:#eccfc8; --white:#ffffff;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font:16px/1.55 "Segoe UI",system-ui,sans-serif;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 'Plus Jakarta Sans',system-ui,sans-serif;overflow:hidden}
 
-.slide{
-  display:none; width:100vw; height:100vh; padding:56px 72px 72px;
-  flex-direction:column; overflow:hidden;
-}
+.slide{display:none;width:100vw;height:100vh;padding:52px 68px 76px;flex-direction:column;overflow:hidden}
 .slide.on{display:flex}
+.slide.center{justify-content:center;align-items:center;text-align:center}
 
-h1{font-size:52px;line-height:1.1;letter-spacing:-1px;margin-bottom:16px}
-h2{font-size:34px;line-height:1.15;margin-bottom:8px;letter-spacing:-.5px}
-h3{font-size:19px;margin-bottom:10px}
-p{color:var(--muted);font-size:17px;margin-bottom:12px}
-p.lead{font-size:21px;color:var(--text)}
-b,strong{color:var(--text)}
+h1{font-family:'Instrument Serif',Georgia,serif;font-size:76px;line-height:1.02;letter-spacing:-1px;margin-bottom:20px}
+h2{font-family:'Instrument Serif',Georgia,serif;font-size:42px;line-height:1.12;margin-bottom:6px}
+h3{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--accent)}
+p{color:var(--muted);font-size:16px;margin-bottom:10px}
+p.lead{font-size:20px;color:var(--ink);line-height:1.5}
+b,strong{color:var(--ink);font-weight:600}
 
-.tag{
-  display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.4px;
-  text-transform:uppercase;color:var(--accent);margin-bottom:14px
-}
-.accent{color:var(--accent)}
-.muted{color:var(--muted)}
+.eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.mono{font-family:ui-monospace,'Cascadia Mono',Consolas,monospace}
 .small{font-size:14px}
 .tiny{font-size:12.5px}
-.mono{font-family:"Cascadia Mono",Consolas,monospace}
+.muted{color:var(--muted)}
 
-.cols{display:grid;gap:22px;flex:1;min-height:0}
+.cols{display:grid;gap:18px;flex:1;min-height:0}
 .c2{grid-template-columns:1fr 1fr}
 .c3{grid-template-columns:repeat(3,1fr)}
 .c4{grid-template-columns:repeat(4,1fr)}
 
-.box{
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:14px;padding:20px;overflow:auto
-}
-.box.hl{border-color:var(--accent);background:linear-gradient(160deg,rgba(77,163,255,.09),transparent)}
-.box h3{color:var(--accent)}
-.box.warm h3{color:var(--warn)}
-.box.good h3{color:var(--ok)}
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:22px;overflow:auto}
+.card.tint{background:var(--tint-2);border-color:var(--tint-3)}
+
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--tint);color:var(--accent)}
+.pill.warm{background:var(--warm);color:#8a4a3a}
 
 ul{list-style:none}
 li{padding:5px 0 5px 20px;position:relative;color:var(--muted);font-size:15px}
-li::before{content:'▸';position:absolute;left:2px;color:var(--accent)}
-li b{color:var(--text)}
+li::before{content:'';position:absolute;left:2px;top:14px;width:6px;height:6px;border-radius:999px;background:var(--accent)}
+li b{color:var(--ink)}
 
 table{width:100%;border-collapse:collapse;font-size:14.5px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
-th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
-td b{color:var(--text)}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+td b{color:var(--ink)}
+tr.hi td{background:var(--tint-2)}
 
-.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700}
-.pill.a{background:rgba(77,163,255,.16);color:#93c8ff}
-.pill.g{background:rgba(61,220,151,.16);color:#7cebbb}
-.pill.w{background:rgba(255,180,84,.16);color:#ffc879}
-.pill.d{background:rgba(255,107,107,.16);color:#ff9a9a}
+.big{font-family:'Instrument Serif',Georgia,serif;font-size:52px;line-height:1;color:var(--accent)}
+.big.ink{color:var(--ink)}
 
-.big{font-size:44px;font-weight:800;line-height:1;letter-spacing:-1px}
-.big.a{color:var(--accent)} .big.g{color:var(--ok)} .big.w{color:var(--warn)}
+.note{padding:14px 18px;border-radius:10px;background:var(--tint);border-left:3px solid var(--accent);font-size:15px;margin-top:12px;color:var(--muted)}
+.note b{color:var(--ink)}
+.note.warm{background:#fdf3f0;border-color:#c98a76}
 
-pre{
-  font-family:"Cascadia Mono",Consolas,monospace;font-size:12.5px;line-height:1.5;
-  color:var(--muted);white-space:pre;overflow:auto
-}
+pre{font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:12.5px;line-height:1.55;color:var(--muted);white-space:pre;overflow:auto}
 
-.flow{display:flex;align-items:stretch;gap:10px;margin:14px 0}
-.flow .step{
-  flex:1;background:var(--panel2);border:1px solid var(--line);
-  border-radius:11px;padding:14px;position:relative
-}
-.flow .step b{display:block;color:var(--accent);font-size:12px;letter-spacing:.6px;margin-bottom:6px}
-.flow .step span{font-size:13.5px;color:var(--muted)}
-.flow .arr{display:flex;align-items:center;color:var(--accent);font-size:20px}
+.flow{display:flex;align-items:stretch;gap:10px;margin:16px 0}
+.flow .step{flex:1;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px}
+.flow .step b{display:block;color:var(--accent);font-size:11px;letter-spacing:1px;margin-bottom:7px;text-transform:uppercase}
+.flow .step span{font-size:14px;color:var(--muted)}
+.flow .arr{display:flex;align-items:center;color:var(--tint-3);font-size:22px}
 
-.funnel div{
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  color:#04101f;font-weight:700;border-radius:7px;padding:9px 14px;
-  margin-bottom:7px;font-size:14.5px;display:flex;justify-content:space-between
-}
+.funnel div{background:var(--accent);color:var(--white);border-radius:10px;padding:10px 16px;margin-bottom:7px;font-size:14.5px;font-weight:600;display:flex;justify-content:space-between}
+.funnel div:nth-child(2){background:#2a8a5a}
+.funnel div:nth-child(3){background:#3d9a6c}
+.funnel div:nth-child(4){background:#59ab82}
+.funnel div:nth-child(5){background:#7cbd9b}
 
-.nav{
-  position:fixed;bottom:18px;right:26px;display:flex;gap:8px;align-items:center;
-  font-size:13px;color:var(--muted);z-index:99
-}
-.nav button{
-  font:inherit;background:var(--panel);border:1px solid var(--line);color:var(--text);
-  width:32px;height:32px;border-radius:8px;cursor:pointer
-}
-.nav button:hover{border-color:var(--accent)}
-.brand{position:fixed;bottom:20px;left:26px;font-size:12px;letter-spacing:2px;color:var(--muted);z-index:99}
+.formula{font-family:'Instrument Serif',Georgia,serif;font-size:38px;text-align:center;padding:26px;background:var(--tint-2);border:1px solid var(--tint-3);border-radius:16px}
+.formula span{color:var(--accent)}
+
+.nav{position:fixed;bottom:20px;right:28px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--faint);z-index:99}
+.nav button{font:inherit;background:var(--white);border:1px solid var(--line);color:var(--ink);width:34px;height:34px;border-radius:10px;cursor:pointer}
+.nav button:hover{border-color:var(--accent);color:var(--accent)}
+.brand{position:fixed;bottom:22px;left:28px;font-size:12px;letter-spacing:2.5px;color:var(--faint);z-index:99;text-transform:uppercase}
 .brand b{color:var(--accent)}
-
-.center{justify-content:center;align-items:center;text-align:center}
-.note{
-  padding:12px 16px;border-radius:10px;border-left:3px solid var(--accent);
-  background:rgba(77,163,255,.08);font-size:15px;margin-top:12px
-}
-.note.g{border-color:var(--ok);background:rgba(61,220,151,.08)}
-.note.w{border-color:var(--warn);background:rgba(255,180,84,.08)}
 </style>
 </head>
 <body>
 
 <!-- 1 -->
 <section class="slide on center">
-  <div class="tag">Космохакатон · кейс «Чистый берег»</div>
-  <h1>КОСМО<span class="accent">БЕРЕГ</span></h1>
-  <p class="lead" style="max-width:820px">Платформа, которая учит читать снимок своего берега,<br>
-  приводит человека на этот берег и возвращает результат<br>его работы в систему как проверенные данные</p>
-  <div style="margin-top:26px" class="small muted">Цифровой продукт развития образовательного проекта «Чистый берег»</div>
+  <div class="eyebrow">Космохакатон · кейс «Чистый берег»</div>
+  <h1>КОСМО<span style="color:var(--accent)">БЕРЕГ</span></h1>
+  <p class="lead" style="max-width:780px">Платформа, которая учит читать снимок своего берега,
+  приводит человека на этот берег и возвращает результат его работы в систему как проверенные данные</p>
+  <div style="margin-top:28px" class="small muted">Цифровой продукт развития образовательного проекта «Чистый берег»</div>
 </section>
 
 <!-- 2 -->
 <section class="slide">
-  <div class="tag">Проблема</div>
+  <div class="eyebrow">Проблема</div>
   <h2>Три разрыва, которые ограничивают проект</h2>
   <div class="cols c3" style="margin-top:22px">
-    <div class="box"><h3>Уборка ради уборки</h3>
+    <div class="card">
+      <h3>Уборка ради уборки</h3>
       <p class="small">Волонтёр не знает, <b>почему именно этот участок</b>, что было раньше и что изменится потом.</p>
-      <p class="small">Экологическое действие не превращается в экологическое понимание — а это и есть цель образовательного проекта.</p></div>
-    <div class="box"><h3>Данные отдельно, руки отдельно</h3>
+      <p class="small">Экологическое действие не превращается в экологическое понимание — а это и есть цель образовательного проекта.</p>
+    </div>
+    <div class="card">
+      <h3>Данные отдельно, руки отдельно</h3>
       <p class="small">ДЗЗ уже выявляет свалки в России: по данным «Ресурс-П» — скопления ТБО <b>от 0,01 га</b>, включая рост свалок у заповедников.</p>
-      <p class="small">Но эти данные видит только дешифровщик. Волонтёр, стоящий на этом берегу, — нет.</p></div>
-    <div class="box"><h3>ООПТ видит мало и поздно</h3>
+      <p class="small">Но эти данные видит только дешифровщик. Волонтёр, стоящий на этом берегу, — нет.</p>
+    </div>
+    <div class="card">
+      <h3>ООПТ видит мало и поздно</h3>
       <p class="small">Площадь территории несопоставима с числом инспекторов. Обход выборочен, нарушение находят случайно.</p>
-      <p class="small">Спутник видит регулярно, но <b>ДЗЗ-специалиста в штате нет</b>.</p></div>
+      <p class="small">Спутник видит регулярно, но <b>ДЗЗ-специалиста в штате нет</b>.</p>
+    </div>
   </div>
   <div class="note">Это одна проблема с трёх сторон: <b>между данными ДЗЗ и людьми на земле нет двустороннего канала.</b></div>
 </section>
 
 <!-- 3 -->
 <section class="slide">
-  <div class="tag">Целевые аудитории</div>
+  <div class="eyebrow">Целевые аудитории</div>
   <h2>Две аудитории с несводимой логикой</h2>
   <div class="cols c2" style="margin-top:18px">
-    <div class="box">
+    <div class="card">
       <h3>Молодёжь 14+</h3>
       <table>
         <tr><th>Мотивация</th><td>Причастность к настоящему, видимый вклад, компания, часы и портфолио</td></tr>
         <tr><th>Барьеры</th><td>Не знает о проекте · «ехать на весь день» · «мой вклад незаметен» · согласие родителей</td></tr>
         <tr><th>Ценность</th><td>«Ты учишься смотреть на Землю из космоса — и меняешь то, что видит спутник»</td></tr>
       </table>
-      <div class="note w tiny" style="margin-top:14px">Сегменты: техно-ориентированные 25% · «за компанию» 45% · «за результатом» 20% · экоактивные 10%</div>
+      <div class="note tiny">Сегменты: техно-ориентированные 25% · «за компанию» 45% · «за результатом» 20% · экоактивные 10%</div>
     </div>
-    <div class="box">
+    <div class="card">
       <h3>Сотрудники ООПТ</h3>
       <table>
-        <tr><th>Мотивация</th><td>Снизить трудозатраты на обход, объективные данные для отчётности, показатели по экопросвещению</td></tr>
+        <tr><th>Мотивация</th><td>Снизить трудозатраты на обход, объективные данные для отчётности</td></tr>
         <tr><th>Барьеры</th><td><b>Недоверие к волонтёрским данным</b> · ответственность за людей на территории · нет времени и ДЗЗ-специалиста</td></tr>
         <tr><th>Ценность</th><td>«Карта проблемных участков и проверенные отчёты — без специалиста в штате»</td></tr>
       </table>
-      <div class="note tiny" style="margin-top:14px">Две разные роли внутри: инспектор (куда ехать) и экопросвещение (как отчитаться)</div>
-      <div class="note g tiny"><b>Доверие измеряем, а не обещаем:</b> скрытые эталонные задания
-      дают инспектору точность каждого разметчика в цифрах</div>
+      <div class="note tiny">Закрытая институциональная роль: доступ выдаёт дирекция территории, а не воронка роста</div>
     </div>
   </div>
-  <div class="note g">Стратегии разные: молодёжь тянем <b>смыслом и игрой</b>, ООПТ — <b>снятием нагрузки</b>. Связывает их общий цикл данных.</div>
+  <div class="note"><b>Доверие измеряем, а не обещаем:</b> скрытые эталонные задания дают инспектору точность каждого разметчика в цифрах.</div>
 </section>
 
 <!-- 4 -->
 <section class="slide center">
-  <div class="tag">Решение</div>
-  <h2 style="max-width:1000px;font-size:40px">Обучение — не предисловие к уборке,<br>а <span class="accent">рабочий узел системы</span></h2>
-  <p class="lead" style="max-width:900px;margin-top:20px">Если научить волонтёра читать снимок своего берега,
+  <div class="eyebrow">Решение</div>
+  <h2 style="max-width:960px;font-size:48px">Обучение — не предисловие к уборке,<br>а <span style="color:var(--accent)">рабочий узел системы</span></h2>
+  <p class="lead" style="max-width:860px;margin-top:22px">Если научить волонтёра читать снимок своего берега,
   а результат его уборки вернуть в систему как подтверждённые данные наблюдения — ООПТ получит регулярно
   обновляемую картину территории, а волонтёр получит доказательство, что его вклад что-то изменил.</p>
 </section>
 
 <!-- 5 -->
 <section class="slide">
-  <div class="tag">Концепция</div>
+  <div class="eyebrow">Концепция</div>
   <h2>Замкнутый цикл</h2>
   <div class="flow">
-    <div class="step"><b>1 · СПУТНИК</b><span>Снимки ДЗЗ дают «зоны внимания» на береговой линии</span></div>
+    <div class="step"><b>1 · Спутник</b><span>Снимки ДЗЗ дают «зоны внимания» на береговой линии</span></div>
     <div class="arr">→</div>
-    <div class="step"><b>2 · ОБУЧЕНИЕ</b><span>Волонтёр учится читать снимок и размечает реальные тайлы</span></div>
+    <div class="step"><b>2 · Обучение</b><span>Волонтёр учится читать снимок и размечает реальные тайлы</span></div>
     <div class="arr">→</div>
-    <div class="step"><b>3 · ПОЛЕ</b><span>Экспедиция: уборка и наземная фиксация состояния</span></div>
+    <div class="step"><b>3 · Поле</b><span>Экспедиция: уборка и наземная фиксация состояния</span></div>
     <div class="arr">→</div>
-    <div class="step"><b>4 · ЭФФЕКТ</b><span>Фото «до/после» + проверка ООПТ = достоверная точка данных</span></div>
+    <div class="step"><b>4 · Эффект</b><span>Фото «до/после» и проверка ООПТ — достоверная точка данных</span></div>
   </div>
-  <div class="box hl" style="margin-top:6px">
-    <h3>5 · КАБИНЕТ ООПТ — приоритеты, акции, отчётность</h3>
+  <div class="card tint">
+    <h3>5 · Кабинет ООПТ — приоритеты, акции, отчётность</h3>
     <p class="small">Проверенные данные уточняют приоритеты следующего цикла. Спутник даёт <b>гипотезу</b>,
     волонтёр — <b>массовую разметку</b>, поле — <b>истину на земле</b>, ООПТ — <b>валидацию</b>.</p>
   </div>
-  <div class="note g">Обе аудитории необходимы для работы цикла. Ни одна не является «придатком» — без любой из них цикл рвётся.</div>
+  <div class="note">Обе аудитории необходимы для работы цикла. Ни одна не является «придатком» — без любой из них цикл рвётся.</div>
 </section>
 
 <!-- 6 -->
 <section class="slide">
-  <div class="tag">Пользовательский путь · молодёжь 14+</div>
+  <div class="eyebrow">Пользовательский путь · молодёжь 14+</div>
   <h2>От первого клика до регулярного участия</h2>
-  <table style="margin-top:12px">
+  <table style="margin-top:14px">
     <tr><th>Этап</th><th>Механика перехода</th><th>Роль продукта</th></tr>
     <tr><td><b>Первый контакт</b></td><td>Крючок «Твой берег из космоса»</td><td>Лендинг показывает снимок знакомого места</td></tr>
-    <tr><td><b>Интерес (3 мин)</b></td><td><b class="accent">Действие до регистрации</b> — мини-тренажёр</td><td>Разметка работает без аккаунта</td></tr>
+    <tr><td><b>Интерес, 3 мин</b></td><td><b>Действие до регистрации</b> — мини-тренажёр</td><td>Разметка работает без аккаунта</td></tr>
     <tr><td><b>Регистрация</b></td><td>Результат «заперт»: сохрани прогресс</td><td>Гейт после полученной ценности</td></tr>
-    <tr><td><b>Обучение</b></td><td>3 модуля по 5–7 мин + практика после каждого</td><td>LMS: теория → практика → автопроверка</td></tr>
+    <tr><td><b>Обучение</b></td><td>3 модуля по 5–7 минут, практика после каждого</td><td>Теория → практика → автопроверка</td></tr>
     <tr><td><b>Завершение</b></td><td>Статус «Наблюдатель» = <b>допуск</b>, а не оценка</td><td>Разблокировка реальной разметки</td></tr>
-    <tr style="background:rgba(77,163,255,.07)"><td><b>Первое участие</b></td><td><b class="accent">Экспедиция на участок, который сам разметил</b></td><td>Связка «разметка → акция», согласие, инструктаж</td></tr>
+    <tr class="hi"><td><b>Первое участие</b></td><td><b>Экспедиция на участок, который сам разметил</b></td><td>Связка «разметка → акция», согласие, инструктаж</td></tr>
     <tr><td><b>Эффект</b></td><td>Слайдер «до/после», участок → «Чистый»</td><td>Гео-фото, модерация, обновление карты</td></tr>
     <tr><td><b>Повторное участие</b></td><td>Подписка на участок: новый снимок → уведомление</td><td>Подписки, рост роли до амбассадора</td></tr>
   </table>
-  <div class="note w">Самый узкий переход — <b>«онлайн → поле» (30%)</b>. Закрываем не призывом, а персональной привязкой к месту.
+  <div class="note warm">Самый узкий переход — <b>«онлайн → поле», 30%</b>. Закрываем не призывом, а персональной привязкой к месту.
   Эту механику невозможно скопировать без ДЗЗ-слоя.</div>
 </section>
 
 <!-- 7 -->
 <section class="slide">
-  <div class="tag">Пользовательский путь · ООПТ</div>
+  <div class="eyebrow">Пользовательский путь · ООПТ</div>
   <h2>От недоверия до регулярного использования</h2>
-  <table style="margin-top:12px">
+  <table style="margin-top:14px">
     <tr><th>Этап</th><th>Барьер</th><th>Механика снятия</th></tr>
     <tr><td><b>Первый контакт</b></td><td>«Очередная система, которую надо вести»</td><td>Заход через боль: «сколько км берега вы не обходите?»</td></tr>
-    <tr style="background:rgba(77,163,255,.07)"><td><b>Демонстрация</b></td><td>«У вас там общие картинки»</td><td><b class="accent">Демо на снимке их собственной территории</b></td></tr>
+    <tr class="hi"><td><b>Демонстрация</b></td><td>«У вас там общие картинки»</td><td><b>Демо на снимке их собственной территории</b></td></tr>
     <tr><td><b>Подключение</b></td><td>Нет времени на настройку</td><td>Настройку делает команда, сотрудник подтверждает</td></tr>
-    <tr><td><b>Освоение</b></td><td>Низкие цифровые навыки</td><td>Один рабочий экран, 45 минут обучения, куратор</td></tr>
+    <tr><td><b>Освоение</b></td><td>Низкие цифровые навыки</td><td>Один рабочий экран, 45 минут, куратор</td></tr>
     <tr><td><b>Первая акция</b></td><td>Ответственность за людей на территории</td><td>Готовый пакет: шаблон, инструктаж, согласия, ТБ</td></tr>
-    <tr style="background:rgba(77,163,255,.07)"><td><b>Ценность</b></td><td><b>Поток шума от волонтёров</b></td><td><b class="accent">Консенсус 3 разметок → сотрудник только подтверждает</b></td></tr>
-    <tr><td><b>Регулярность</b></td><td>Не встраивается в отчётность</td><td>Выгрузка PDF / CSV / GeoJSON</td></tr>
+    <tr class="hi"><td><b>Ценность</b></td><td><b>Поток шума от волонтёров</b></td><td><b>Консенсус 3 разметок → сотрудник только подтверждает</b></td></tr>
+    <tr><td><b>Удержание</b></td><td>«Что я с этого получил»</td><td>Сезонная сводка, пакетная модерация, заявка на съёмку</td></tr>
   </table>
-  <div class="note g">Принцип: сотрудник ООПТ <b>никогда не делает работу, которую может сделать волонтёр или система</b>.
-  Он только принимает решение.</div>
+  <div class="note">Принцип: сотрудник ООПТ <b>никогда не делает работу, которую может сделать волонтёр или система</b>. Он только принимает решение.</div>
 </section>
 
 <!-- 8 -->
 <section class="slide">
-  <div class="tag">Цифровой продукт</div>
+  <div class="eyebrow">Цифровой продукт</div>
   <h2>Роли и модули</h2>
   <div class="cols c2" style="margin-top:16px">
-    <div class="box">
-      <h3>Ролевая модель = ответ на барьер доверия</h3>
+    <div class="card">
+      <h3>Ролевая модель — ответ на барьер доверия</h3>
       <table>
         <tr><td><b>Гость</b></td><td>Тренажёр, публичная карта</td></tr>
-        <tr><td><b>Ученик</b></td><td>Курс, учебная разметка <span class="pill d">не идёт в ООПТ</span></td></tr>
-        <tr><td><b>Наблюдатель</b></td><td>Реальная разметка, акции, отчёты</td></tr>
+        <tr class="hi"><td><b>Ученик</b></td><td>Курс, учебная разметка <span class="pill warm">не идёт в ООПТ</span></td></tr>
+        <tr><td><b>Наблюдатель</b></td><td>Реальная разметка, акции, отчёты, игры</td></tr>
         <tr><td><b>Наблюдатель 14–17</b></td><td>+ согласие родителя, закрытый профиль</td></tr>
         <tr><td><b>Амбассадор</b></td><td>+ заявки на акции, менторство</td></tr>
-        <tr><td><b>Сотрудник ООПТ</b></td><td>Приоритеты, модерация, акции, экспорт</td></tr>
+        <tr><td><b>Сотрудник ООПТ</b></td><td>Приоритеты, модерация, акции, заявки на съёмку</td></tr>
       </table>
-      <div class="note tiny">Разметка Ученика <b>физически не может</b> попасть в рабочую карту — это архитектурная гарантия, а не обещание.</div>
+      <div class="note tiny">Разметка Ученика <b>физически не может</b> попасть в рабочую карту — архитектурная гарантия, а не обещание.</div>
     </div>
-    <div class="box">
-      <h3>8 функциональных модулей</h3>
+    <div class="card">
+      <h3>12 функциональных модулей</h3>
       <ul>
-        <li><b>M1 Карта берега</b> — слои, статусы, история участка</li>
+        <li><b>M1 Карта берега</b> — слои, статусы, история</li>
         <li><b>M2 Тренажёр и курс</b> — образовательный контур</li>
-        <li><b>M3 Разметка</b> — консенсус, репутация разметчика</li>
+        <li><b>M3 Разметка</b> — консенсус, репутация</li>
         <li><b>M4 Акции</b> — запись, инструктаж, согласия</li>
         <li><b>M5 Полевой отчёт</b> — гео-фото «до/после»</li>
         <li><b>M6 Кабинет ООПТ</b> — приоритеты и модерация</li>
         <li><b>M7 Профиль</b> — часы, сертификат, подписки</li>
-        <li><b>M8 Приоритизация</b> — индекс внимания, детектор роста</li>
-        <li><b>M9 Калибровка</b> — измерение точности разметчиков</li>
-        <li><b>M10 Заявки на съёмку</b> — обратная связь с оператором ДЗЗ</li>
+        <li><b>M8 Приоритизация</b> — индекс, детектор роста</li>
+        <li><b>M9 Калибровка</b> — измерение точности</li>
+        <li><b>M10 Заявки на съёмку</b> — обратная связь с ДЗЗ</li>
+        <li><b>M11 Игровой контур</b> — дуэль, «Инспектор на день»</li>
+        <li><b>M12 Карта происшествий</b> — фильтры по типу и области</li>
       </ul>
     </div>
   </div>
@@ -272,38 +256,34 @@ pre{
 
 <!-- 9 -->
 <section class="slide">
-  <div class="tag">Ядро логики</div>
+  <div class="eyebrow">Ядро логики</div>
   <h2>Индекс внимания участка</h2>
-  <div class="box hl" style="margin-top:14px;flex:0">
-    <pre style="font-size:19px;color:var(--text);text-align:center;line-height:1.8">
-Индекс = <span style="color:#4da3ff">0.40·S</span>  +  <span style="color:#3ddc97">0.30·C</span>  +  <span style="color:#ffb454">0.20·T</span>  +  <span style="color:#7c5cff">0.10·A</span></pre>
+  <div class="formula" style="margin-top:16px">
+    0.40·<span>S</span> &nbsp;+&nbsp; 0.30·<span>C</span> &nbsp;+&nbsp; 0.20·<span>T</span> &nbsp;+&nbsp; 0.10·<span>A</span>
   </div>
-  <div class="cols c4" style="margin-top:16px">
-    <div class="box"><h3>S — сигнал ДЗЗ</h3><p class="small">Величина изменения между разновременными снимками</p>
-      <p class="tiny muted"><b>Почему не больше 0.40:</b> спутник даёт гипотезу, а не диагноз. Облачность, тени, отмели дают ложные срабатывания.</p></div>
-    <div class="box good"><h3>C — консенсус людей</h3><p class="small">Доля разметчиков, отметивших проблему, взвешенная по репутации</p>
-      <p class="tiny muted"><b>Зачем:</b> делает обучение полезной работой — разметка реально влияет на приоритеты.</p></div>
-    <div class="box warm"><h3>T — давность</h3><p class="small">Время с последней подтверждённой уборки или проверки</p>
-      <p class="tiny muted"><b>Зачем:</b> не даёт системе «залипнуть» на одних и тех же участках.</p></div>
-    <div class="box"><h3>A — доступность</h3><p class="small">Реальная достижимость участка для волонтёров</p>
-      <p class="tiny muted"><b>Зачем:</b> смысл имеет тот приоритет, до которого можно доехать.</p></div>
+  <div class="cols c4" style="margin-top:18px">
+    <div class="card"><h3>S — сигнал ДЗЗ</h3><p class="small">Величина изменения между снимками</p>
+      <p class="tiny"><b>Почему не больше 0.40:</b> спутник даёт гипотезу, а не диагноз. Облачность, тени и отмели дают ложные срабатывания.</p></div>
+    <div class="card"><h3>C — консенсус людей</h3><p class="small">Согласие × полнота выборки, взвешенные по репутации</p>
+      <p class="tiny"><b>Зачем:</b> делает обучение полезной работой — разметка реально влияет на приоритеты.</p></div>
+    <div class="card"><h3>T — давность</h3><p class="small">Время с последней подтверждённой проверки</p>
+      <p class="tiny"><b>Зачем:</b> не даёт системе «залипнуть» на одних и тех же участках.</p></div>
+    <div class="card"><h3>A — доступность</h3><p class="small">Реальная достижимость для волонтёров</p>
+      <p class="tiny"><b>Зачем:</b> смысл имеет тот приоритет, до которого можно доехать.</p></div>
   </div>
-  <div class="note">Формула <b>открыта и объяснима</b> — сотрудник ООПТ должен понимать, почему участок наверху списка. Иначе не будет доверия.</div>
-  <div class="note w"><b>Детектор роста уточняет S, а не добавляет пятое слагаемое.</b>
-  Большая стабильная свалка подождёт, маленькая растущая через сезон станет большой.
-  Основано на подтверждённом кейсе: по данным «Ресурс-П» фиксировался именно <b>рост</b>
-  свалки у заповедника за 2017–2019.</div>
+  <div class="note">Формула <b>открыта и объяснима</b> — инспектор должен понимать, почему участок наверху. Иначе не будет доверия.
+  Детектор роста уточняет фактор S, а не добавляет пятое слагаемое.</div>
 </section>
 
 <!-- 10 -->
 <section class="slide">
-  <div class="tag">Прототип</div>
+  <div class="eyebrow">Прототип · живое демо</div>
   <h2>Сквозной сценарий S1 → S6 проходит без разрывов</h2>
   <div class="cols c2" style="margin-top:16px">
-    <div class="box">
+    <div class="card">
       <table>
         <tr><th>Шаг</th><th>Что проверяется</th></tr>
-        <tr><td><b>S1</b></td><td>Ценность до регистрации: клик по снимку за 30 сек</td></tr>
+        <tr><td><b>S1</b></td><td>Ценность до регистрации: клик по снимку за 30 секунд</td></tr>
         <tr><td><b>S2</b></td><td>Обучение → допуск, роль повышается автоматически</td></tr>
         <tr><td><b>S3</b></td><td>Разметка достигает консенсуса 3/3 → очередь ООПТ</td></tr>
         <tr><td><b>S4</b></td><td>Модерация в 2 клика, участок возглавляет приоритеты</td></tr>
@@ -311,139 +291,132 @@ pre{
         <tr><td><b>S6</b></td><td>Отчёт подтверждён → статус «Чистый» → пересчёт</td></tr>
       </table>
     </div>
-    <div class="box good">
+    <div class="card tint">
       <h3>Цикл действительно замыкается</h3>
-      <pre style="font-size:14px;line-height:1.9;color:var(--text)">
-Индекс участка «Устье Каменки»
-
-  после разметки     <span style="color:#ff9a9a">77</span>   ← 1-е место
-  после уборки       <span style="color:#7cebbb">41</span>   ← ушёл вниз
-
-Приоритет перешёл на «Северную косу»</pre>
-      <p class="small" style="margin-top:12px">Проверяется автоматически: <span class="mono">node e2e-check.js</span> — 27 утверждений, включая пересчёт приоритетов.</p>
-      <div class="note g tiny"><b>Бэкенд реализован:</b> FastAPI, 13 таблиц, 37 операций API,
-      131 тест, миграции, <span class="mono">docker compose up</span>. Индекс участка
-      считают две независимые реализации — и получают одно значение.</div>
-      <div class="note tiny"><b>Настоящее в прототипе:</b> индекс внимания, консенсус, репутация, ролевая модель, проверка допуска.
-      <b>Демонстрационное:</b> снимки генерируются процедурно вместо тайлов COG.</div>
+      <div style="display:flex;align-items:baseline;gap:18px;margin:18px 0">
+        <div><div class="big">85</div><div class="tiny muted">после консенсуса</div></div>
+        <div style="font-size:28px;color:var(--tint-3)">→</div>
+        <div><div class="big ink">48</div><div class="tiny muted">после уборки</div></div>
+      </div>
+      <p class="small">Приоритет перешёл на следующий участок.</p>
+      <div class="note tiny"><b>Проверяется автоматически:</b> те же числа выдают две независимые реализации —
+      прототип и бэкенд. Разойдётся формула — упадут оба набора тестов.</div>
+      <div class="note tiny"><b>Бэкенд работает:</b> FastAPI, 17 таблиц, 44 операции API, 156 тестов,
+      <span class="mono">docker compose up</span>.</div>
     </div>
   </div>
 </section>
 
 <!-- 11 -->
 <section class="slide">
-  <div class="tag">Архитектура</div>
+  <div class="eyebrow">Архитектура</div>
   <h2>Компоненты и потоки данных</h2>
-  <pre style="flex:1;font-size:11.5px;margin-top:10px">
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ A. КЛИЕНТЫ    A1 Лендинг+тренажёр (Гость) │ A2 PWA волонтёра │ A3 Кабинет ООПТ  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                          │ HTTPS / REST + JWT
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ B. API GATEWAY — nginx, rate limit, TLS                                          │
-└─────────────────────────────────────────────────────────────────────────────────┘
-      │            │              │              │              │
- ┌────────┐  ┌──────────┐  ┌────────────┐  ┌─────────┐  ┌──────────────┐
- │C1 AUTH │  │C2 LEARN  │  │C3 ANNOTATE │  │C4 EVENTS│  │C5 REPORTS    │
- │роли,   │  │курс,     │  │КОНСЕНСУС,  │  │акции,   │  │фото до/после,│
- │возраст,│  │прогресс, │  │репутация   │  │допуск,  │  │модерация     │
- │согласия│  │сертификат│  │разметчика  │  │согласия │  │              │
- └────────┘  └──────────┘  └────────────┘  └─────────┘  └──────────────┘
-                                  │                            │
-                         ┌────────────────────────────────────────────┐
-                         │ C6 GEO / SCORING — ЯДРО ПРИОРИТИЗАЦИИ      │
-                         │ участки, статусы, история, ИНДЕКС ВНИМАНИЯ │
-                         └────────────────────────────────────────────┘
-                                  │                    ▲ сигнал S
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ D. ХРАНИЛИЩА   PostgreSQL+PostGIS │ S3/MinIO: тайлы COG, фото │ Redis: очереди  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                                       ▲
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ E. КОНВЕЙЕР ДЗЗ (асинхронный)                                                    │
-│ E1 приём сцены → E2 предобработка → E3 нарезка тайлов → E4 детекция изменений    │
-│    (Геопортал)     (GDAL/rasterio)     (COG, TiTiler)     → кандидаты → C6       │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                                       ▲
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ F. ВНЕШНИЕ   F1 Геопортал Роскосмоса / Главкосмос (Ресурс-П, Канопус-В)          │
-│              резерв: Sentinel-2 │ F2 БПЛА │ F4 ДОБРО.РФ (часы) │ F6 уведомления │
-└─────────────────────────────────────────────────────────────────────────────────┘</pre>
+  <pre style="flex:1;margin-top:12px">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ A. КЛИЕНТЫ   Лендинг и тренажёр (Гость) │ PWA волонтёра │ Кабинет ООПТ      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                        │ HTTPS · REST · JWT
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ B. API GATEWAY — nginx, ограничение частоты, TLS                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+    │         │           │           │          │           │
+┌────────┐┌────────┐┌──────────┐┌─────────┐┌──────────┐┌──────────┐
+│C1 AUTH ││C2 КУРС ││C3 РАЗМЕТ.││C4 АКЦИИ ││C5 ОТЧЁТЫ ││C9 ИГРЫ   │
+│роли,   ││прогресс││КОНСЕНСУС,││допуск,  ││фото до/  ││дуэль,    │
+│возраст,││сертиф. ││репутация ││согласия ││после     ││инспектор │
+│согласия││        ││          ││         ││          ││          │
+└────────┘└────────┘└──────────┘└─────────┘└──────────┘└──────────┘
+                          │              │            │
+            ┌──────────────────────────────────────────────────┐
+            │ C6 GEO / SCORING — ЯДРО ПРИОРИТИЗАЦИИ            │
+            │ участки, статусы, история, ИНДЕКС ВНИМАНИЯ       │
+            │ C7 Калибровка  ·  C8 Заявки на съёмку            │
+            └──────────────────────────────────────────────────┘
+                          │                  ▲ сигнал S
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ D. ХРАНИЛИЩА   PostgreSQL + PostGIS │ S3: тайлы COG и фото │ Redis: очереди  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                             ▲
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ E. КОНВЕЙЕР ДЗЗ — асинхронный, не блокирует API                              │
+│ приём сцены → предобработка → нарезка тайлов → детекция изменений и роста    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                             ▲
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ F. ВНЕШНИЕ   Геопортал Роскосмоса и Главкосмос: Ресурс-П, Канопус-В          │
+│              резерв Sentinel-2 │ БПЛА │ ДОБРО.РФ │ e-mail и push FCM         │
+└─────────────────────────────────────────────────────────────────────────────┘</pre>
 </section>
 
 <!-- 12 -->
 <section class="slide">
-  <div class="tag">Данные ДЗЗ</div>
+  <div class="eyebrow">Данные ДЗЗ</div>
   <h2>Источник и место в системе</h2>
   <div class="cols c2" style="margin-top:16px">
-    <div class="box">
+    <div class="card">
       <h3>Путь снимка</h3>
       <table>
-        <tr><td><b>Источник</b></td><td>Геопортал Роскосмоса / Главкосмос; резерв — Sentinel-2, аэросъёмка БПЛА</td></tr>
-        <tr><td><b>Предобработка</b></td><td>Облачность, привязка, нормализация — GDAL / rasterio</td></tr>
-        <tr><td><b>Нарезка</b></td><td>COG + тайловая пирамида, отдача через TiTiler</td></tr>
-        <tr><td><b>Детекция</b></td><td>Разность спектральных индексов между датами → сигнал <b>S ∈ [0,1]</b></td></tr>
-        <tr><td><b>Потребление</b></td><td>Волонтёр видит тайл и получает задание; ООПТ видит приоритеты</td></tr>
+        <tr><td><b>Источник</b></td><td>Геопортал Роскосмоса и Главкосмос; резерв — Sentinel-2 и аэросъёмка БПЛА</td></tr>
+        <tr><td><b>Предобработка</b></td><td>Облачность, привязка, нормализация — GDAL и rasterio</td></tr>
+        <tr><td><b>Нарезка</b></td><td>COG и тайловая пирамида, отдача через TiTiler</td></tr>
+        <tr><td><b>Детекция</b></td><td>Разность спектральных индексов между датами → сигнал <b>S</b></td></tr>
+        <tr><td><b>Динамика</b></td><td>Ряд площадей аномалии → метка «растёт», усиление S</td></tr>
       </table>
     </div>
-    <div class="box hl">
-      <h3>Главная техническая ставка</h3>
-      <p class="small">На MVP <b>не строим ML-детекцию мусора</b>. Критерий прямо допускает: техническая обработка ДЗЗ не обязательна.</p>
-      <ul>
-        <li>Спутник даёт <b>грубый сигнал изменения</b> — дёшево и объяснимо</li>
-        <li>Точность обеспечивают <b>люди</b>: консенсус волонтёров + проверка ООПТ</li>
-        <li>Подтверждения накапливаются в <b>размеченный датасет</b></li>
-        <li>На этапе 2 он становится обучающей выборкой для модели</li>
-      </ul>
-      <div class="note g">Обучение волонтёров — одновременно образовательный продукт <b>и</b> способ получить разметку. Экономия ~1.5 млн ₽.</div>
-      <div class="note"><b>Связь двусторонняя.</b> Инспектор запрашивает съёмку участка
-      через оператора — Геопортал принимает такие заявки штатно. Для растущей аномалии
-      приоритет повышается автоматически. Ни один аналог так не умеет.</div>
+    <div class="card tint">
+      <h3>Связь двусторонняя</h3>
+      <p class="small">Обычно платформа только потребляет снимки и ждёт, когда спутник пройдёт над нужным местом.
+      Инспектор у нас <b>заказывает съёмку конкретного участка</b> — Геопортал принимает такие заявки штатно.
+      Для растущей аномалии приоритет повышается автоматически.</p>
+      <p class="small">Ни один из проанализированных аналогов такой возможности не имеет.</p>
+      <div class="note tiny"><b>ML-детекции в MVP нет осознанно.</b> Спутник даёт грубый сигнал, точность обеспечивают
+      люди через консенсус. Экономия около 1,5 млн ₽, а побочный эффект — накапливается размеченный датасет
+      для модели на этапе 2.</div>
     </div>
   </div>
 </section>
 
 <!-- 13 -->
 <section class="slide">
-  <div class="tag">Реализуемость</div>
+  <div class="eyebrow">Реализуемость</div>
   <h2>Стек, данные пользователей, эксплуатация</h2>
   <div class="cols c3" style="margin-top:16px">
-    <div class="box">
-      <h3>Что берём готовым</h3>
+    <div class="card">
+      <h3>Берём готовым</h3>
       <ul>
-        <li>PostgreSQL + <b>PostGIS</b> — стандарт геоданных</li>
-        <li><b>MapLibre GL</b> — open-source, без лицензий</li>
-        <li>GDAL / rasterio / TiTiler — обработка растров</li>
-        <li>FastAPI, Celery + Redis, S3/MinIO</li>
+        <li>PostgreSQL + <b>PostGIS</b></li>
+        <li><b>MapLibre GL</b> — без лицензий</li>
+        <li>GDAL, rasterio, TiTiler</li>
+        <li>FastAPI, Celery + Redis, S3</li>
       </ul>
-      <h3 style="margin-top:14px">Что пишем сами</h3>
+      <h3 style="margin-top:16px">Пишем сами</h3>
       <ul>
         <li><b>Индекс внимания</b></li>
         <li><b>Консенсус и репутация</b></li>
         <li><b>Связка «курс → допуск»</b></li>
       </ul>
-      <p class="tiny muted">Правило: своё — только суть продукта. Остальное зрелое и готовое.</p>
+      <p class="tiny muted">Своё — только суть продукта. Остальное зрелое и готовое.</p>
     </div>
-    <div class="box warm">
+    <div class="card">
       <h3>Аудитория 14+ и ПДн</h3>
       <ul>
         <li>Хостинг в РФ, минимизация данных</li>
-        <li>Офлайн-участие <b>невозможно</b> без согласия родителя — проверка в C4</li>
-        <li>Профили 14–17 закрыты по умолчанию</li>
+        <li>Офлайн-участие <b>невозможно</b> без согласия родителя</li>
+        <li>Профили 14–17 закрыты, в рейтингах псевдоним</li>
         <li>Геолокация огрубляется до участка</li>
-        <li>Обязательная модерация UGC-фото</li>
-        <li>Координаты уязвимых объектов ООПТ скрыты</li>
-        <li>Неизменяемый аудит-лог модерации</li>
+        <li>Обязательная модерация фото</li>
+        <li>Координаты уязвимых объектов скрыты</li>
+        <li>Неизменяемый аудит-лог решений</li>
       </ul>
     </div>
-    <div class="box">
+    <div class="card tint">
       <h3>Эксплуатация</h3>
-      <p class="small"><span class="mono">docker compose up</span> — PostGIS, миграции, демо-данные, API. <b>131 тест зелёные.</b></p>
+      <p class="small"><span class="mono">docker compose up</span> — PostGIS, миграции, демо-данные, API. <b>156 тестов зелёные.</b></p>
       <table>
         <tr><th>Узкое место</th><th>Решение</th></tr>
         <tr><td>Отдача тайлов</td><td>CDN, тайлы статичны</td></tr>
-        <tr><td>Конвейер ДЗЗ</td><td>+ Celery-воркеры</td></tr>
-        <tr><td>API 10k+ MAU</td><td>Stateless за балансировщиком</td></tr>
+        <tr><td>Конвейер ДЗЗ</td><td>Больше воркеров Celery</td></tr>
+        <tr><td>API, 10k+ MAU</td><td>Stateless за балансировщиком</td></tr>
       </table>
       <div class="note tiny">Нагрузка предсказуема: пики в дни акций и школьных занятий, а не равномерно.</div>
     </div>
@@ -452,95 +425,98 @@ pre{
 
 <!-- 14 -->
 <section class="slide">
-  <div class="tag">KPI</div>
+  <div class="eyebrow">KPI</div>
   <h2>Воронка и способ измерения</h2>
   <div class="cols c2" style="margin-top:14px">
-    <div class="box">
+    <div class="card">
       <h3>Модель за 12 месяцев пилота</h3>
-      <div class="funnel" style="margin-top:12px">
+      <div class="funnel" style="margin-top:14px">
         <div><span>Регистрации</span><span>3 000</span></div>
         <div style="width:88%"><span>Начали обучение · 55%</span><span>1 650</span></div>
         <div style="width:74%"><span>Завершили обучение · 45%</span><span>750</span></div>
         <div style="width:52%"><span>Вышли на акцию · 30%</span><span>225</span></div>
         <div style="width:36%"><span>Повторное участие · 35%</span><span>80</span></div>
       </div>
-      <div class="note w tiny">Все конверсии — <b>обоснованные допущения</b>, а не факты. Задача пилота — заменить их измеренными.</div>
+      <div class="note warm tiny">Все конверсии — <b>обоснованные допущения</b>, а не факты. Задача пилота — заменить их измеренными.</div>
     </div>
-    <div class="box">
-      <h3>Ключевые показатели и источник данных</h3>
+    <div class="card">
+      <h3>Ключевые показатели и источник</h3>
       <table>
         <tr><th>KPI</th><th>Цель</th><th>Источник</th></tr>
         <tr><td><b>E2</b> завершение курса</td><td>≥45%</td><td class="mono tiny">course_progress</td></tr>
-        <tr><td><b>P1</b> выход в поле</td><td>≥30%</td><td class="mono tiny">enrollments.attended</td></tr>
-        <tr><td><b>R1</b> повторное участие</td><td>≥35%</td><td class="mono tiny">агрегат по пользователю</td></tr>
-        <tr><td><b>Q1</b> точность разметки</td><td>≥70%</td><td class="mono tiny">аудит-лог модерации</td></tr>
+        <tr><td><b>P1</b> выход в поле</td><td>≥30%</td><td class="mono tiny">enrollments</td></tr>
+        <tr><td><b>R1</b> повторное участие</td><td>≥35%</td><td class="mono tiny">агрегат</td></tr>
+        <tr><td><b>Q1</b> подтверждений ООПТ</td><td>≥70%</td><td class="mono tiny">аудит-лог</td></tr>
+        <tr><td><b>Q4</b> измеренная точность</td><td>≥75%</td><td class="mono tiny">контрольные задания</td></tr>
         <tr><td><b>V3</b> участков очищено</td><td>≥60</td><td class="mono tiny">field_reports</td></tr>
-        <tr><td><b>V4</b> удержание ООПТ</td><td>2 из 3</td><td class="mono tiny">CRM проекта</td></tr>
       </table>
-      <div class="note g tiny"><b>Контрольная группа:</b> 1 из 3 ООПТ работает без цифрового контура. Сравнение показывает вклад именно продукта.</div>
+      <div class="note tiny"><b>Контрольная группа:</b> одна из трёх ООПТ работает без цифрового контура. Сравнение показывает вклад именно продукта.</div>
     </div>
   </div>
 </section>
 
 <!-- 15 -->
 <section class="slide">
-  <div class="tag">План и экономика</div>
+  <div class="eyebrow">План и экономика</div>
   <h2>Как проект запускается</h2>
   <div class="cols c2" style="margin-top:14px">
-    <div class="box">
+    <div class="card">
       <h3>Этапы</h3>
       <table>
         <tr><th>Этап</th><th>Срок</th><th>Результат</th></tr>
         <tr><td><b>0 Подготовка</b></td><td>мес. 1</td><td>Соглашения с ООПТ и школами, доступ к данным</td></tr>
-        <tr><td><b>1 MVP</b></td><td>мес. 2–4</td><td>Сценарии S1–S6 на 1 территории</td></tr>
+        <tr><td><b>1 MVP</b></td><td>мес. 2–4</td><td>Сценарии S1–S6 на одной территории</td></tr>
         <tr><td><b>2 Пилот</b></td><td>мес. 5–10</td><td>2–3 ООПТ, 20+ акций, проверенные KPI</td></tr>
         <tr><td><b>3 Оценка</b></td><td>мес. 11–12</td><td>Калибровка, пакет тиражирования</td></tr>
         <tr><td><b>4 Масштаб</b></td><td>год 2</td><td>10+ ООПТ, ML-модель на своих данных</td></tr>
       </table>
-      <p class="small" style="margin-top:12px">Пиковая команда — <b>5.5 FTE</b>.</p>
+      <p class="small" style="margin-top:12px">Пиковая численность команды — <b>5,5 FTE</b>.</p>
     </div>
-    <div class="box">
+    <div class="card">
       <h3>Затраты на 12 месяцев</h3>
       <table>
-        <tr><td>ФОТ разработки</td><td><b>4.30 млн ₽</b></td><td class="tiny muted">47%</td></tr>
-        <tr><td>ФОТ операционной команды</td><td><b>2.00</b></td><td class="tiny muted">22%</td></tr>
-        <tr><td>Проведение акций</td><td><b>0.90</b></td><td class="tiny muted">10%</td></tr>
-        <tr><td>Контент, дизайн</td><td><b>0.85</b></td><td class="tiny muted">9%</td></tr>
-        <tr><td>Инфраструктура, данные ДЗЗ</td><td><b>0.82</b></td><td class="tiny muted">9%</td></tr>
-        <tr><td>Продвижение</td><td><b>0.40</b></td><td class="tiny muted">4%</td></tr>
-        <tr><td><b>ИТОГО</b></td><td><b class="accent">9.27 млн ₽</b></td><td></td></tr>
+        <tr><td>ФОТ разработки</td><td><b>4,30 млн ₽</b></td><td class="tiny muted">47%</td></tr>
+        <tr><td>ФОТ операционной команды</td><td><b>2,00</b></td><td class="tiny muted">22%</td></tr>
+        <tr><td>Проведение акций</td><td><b>0,90</b></td><td class="tiny muted">10%</td></tr>
+        <tr><td>Контент и дизайн</td><td><b>0,85</b></td><td class="tiny muted">9%</td></tr>
+        <tr><td>Инфраструктура и данные ДЗЗ</td><td><b>0,82</b></td><td class="tiny muted">9%</td></tr>
+        <tr><td>Продвижение</td><td><b>0,40</b></td><td class="tiny muted">4%</td></tr>
+        <tr><td><b>Итого</b></td><td><b style="color:var(--accent)">9,27 млн ₽</b></td><td></td></tr>
       </table>
-      <div class="note g">Подключение <b>каждой следующей ООПТ — ~150 тыс ₽</b>. Продукт создаётся один раз, тиражируется дёшево.</div>
+      <div class="card tint" style="margin-top:14px;text-align:center;padding:18px">
+        <div class="big">~150 тыс ₽</div>
+        <p class="small" style="margin:6px 0 0">подключение каждой следующей ООПТ.<br>Продукт делается один раз, тиражируется дёшево</p>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- 16 -->
 <section class="slide">
-  <div class="tag">Риски</div>
-  <h2>Три главных риска — честно</h2>
+  <div class="eyebrow">Риски</div>
+  <h2>Три главных — честно</h2>
   <div class="cols c3" style="margin-top:18px">
-    <div class="box"><h3>R-P2 · Разрыв «онлайн → поле»</h3>
+    <div class="card"><h3>R-P2 · Разрыв «онлайн → поле»</h3>
       <p class="small">Обученные не доходят до реальной акции. Проект остаётся онлайн-игрой.</p>
       <p class="small"><b>Снижение:</b> экспедиция на свой участок, командная запись, закрытие логистики.</p>
-      <div class="note w tiny">Это узкое место всей модели. Метрика P1 — главный индикатор пилота.</div></div>
-    <div class="box"><h3>R-O1 · ООПТ не подключается</h3>
+      <div class="note warm tiny">Узкое место всей модели. Метрика P1 — главный индикатор пилота.</div></div>
+    <div class="card"><h3>R-O1 · ООПТ не подключается</h3>
       <p class="small">Без ООПТ рвётся контур верификации, волонтёрские данные теряют легитимность.</p>
-      <p class="small"><b>Снижение:</b> работаем сразу с 4–5 ООПТ, чтобы дойти до 2–3; демо на их данных; поддержка регионального минприроды.</p></div>
-    <div class="box"><h3>R-T1 · Нет доступа к данным ДЗЗ</h3>
+      <p class="small"><b>Снижение:</b> работаем сразу с 4–5 территориями, чтобы дойти до 2–3; демо на их данных; поддержка регионального минприроды.</p></div>
+    <div class="card"><h3>R-T1 · Нет доступа к данным ДЗЗ</h3>
       <p class="small">Условия доступа к российской группировке могут оказаться неприемлемыми.</p>
-      <p class="small"><b>Снижение:</b> источник абстрагирован в компоненте E1 — переключаемся на Sentinel-2 и БПЛА <b>без изменения архитектуры</b>.</p></div>
+      <p class="small"><b>Снижение:</b> источник абстрагирован — переключаемся на Sentinel-2 и БПЛА <b>без изменения архитектуры</b>.</p></div>
   </div>
-  <div class="note">Полный реестр — 12 рисков в четырёх категориях: организационные, продуктовые, ресурсные, технические.</div>
+  <div class="note">Полный реестр — 14 рисков в четырёх категориях: организационные, продуктовые, ресурсные, технические.</div>
 </section>
 
 <!-- 17 -->
 <section class="slide">
-  <div class="tag">Ожидаемый эффект</div>
+  <div class="eyebrow">Ожидаемый эффект</div>
   <h2>Почему продукт, а не просто серия мероприятий</h2>
   <div class="cols c2" style="margin-top:16px">
-    <div class="box">
-      <h3>Без цифрового продукта</h3>
+    <div class="card">
+      <h3 style="color:var(--faint)">Без цифрового продукта</h3>
       <ul>
         <li>Участок выбирает организатор по своему усмотрению</li>
         <li>Обучение — лекция, результат не фиксируется</li>
@@ -550,7 +526,7 @@ pre{
         <li>Каждая акция запускается с нуля</li>
       </ul>
     </div>
-    <div class="box good">
+    <div class="card tint">
       <h3>С КОСМОБЕРЕГОМ</h3>
       <ul>
         <li>Участок выбирается <b>по данным наблюдения</b></li>
@@ -563,70 +539,59 @@ pre{
     </div>
   </div>
   <div class="cols c4" style="margin-top:16px;flex:0">
-    <div class="box"><div class="big a">750</div><p class="tiny" style="margin:6px 0 0">прошли полный курс по ДЗЗ и экологическому наблюдению</p></div>
-    <div class="box"><div class="big g">150+</div><p class="tiny" style="margin:6px 0 0">участков береговой линии под регулярным наблюдением</p></div>
-    <div class="box"><div class="big w">60+</div><p class="tiny" style="margin:6px 0 0">участков очищено и подтверждено проверкой ООПТ</p></div>
-    <div class="box"><div class="big a">12</div><p class="tiny" style="margin:6px 0 0">амбассадоров, способных вести акции самостоятельно</p></div>
+    <div class="card" style="text-align:center"><div class="big">750</div><p class="tiny" style="margin:6px 0 0">прошли полный курс по ДЗЗ</p></div>
+    <div class="card" style="text-align:center"><div class="big">150+</div><p class="tiny" style="margin:6px 0 0">участков под наблюдением</p></div>
+    <div class="card" style="text-align:center"><div class="big">60+</div><p class="tiny" style="margin:6px 0 0">участков очищено и подтверждено</p></div>
+    <div class="card" style="text-align:center"><div class="big">12</div><p class="tiny" style="margin:6px 0 0">амбассадоров ведут акции сами</p></div>
   </div>
 </section>
 
-
-<!-- масштабирование -->
+<!-- 18 -->
 <section class="slide">
-  <div class="tag">Потенциал</div>
+  <div class="eyebrow">Потенциал</div>
   <h2>Что мы построили на самом деле</h2>
-  <p class="lead" style="max-width:1000px">Береговой участок — частный случай.
-  Контур «разновременные снимки → обученный человек → консенсус → проверка эксперта»
+  <p class="lead" style="max-width:1000px">Береговой участок — частный случай. Контур
+  «разновременные снимки → обученный человек → консенсус → проверка эксперта»
   не привязан к мусору ни в одном компоненте.</p>
-
   <div class="cols c2" style="margin-top:14px">
-    <div class="box">
+    <div class="card">
       <h3>Масштаб задачи рядом</h3>
       <table>
-        <tr><td><b>12,8 млн га</b></td><td>пройдено огнём в 2024 году, +8% к 2023-му</td></tr>
+        <tr><td><b>12,8 млн га</b></td><td>пройдено огнём в 2024 году, на 8% больше 2023-го</td></tr>
         <tr><td><b>4,76 млн га</b></td><td>Дальневосточный округ — лидер по площади</td></tr>
         <tr><td><b>40–70</b></td><td>крупных наводнений в год</td></tr>
         <tr><td><b>500 тыс. км²</b></td><td>территории подвержено подтоплению</td></tr>
         <tr><td><b>13 млрд ₽</b></td><td>ущерб от паводков одного лета 2021 года</td></tr>
       </table>
-      <div class="note tiny">Общее одно: объём, который ведомства физически
-      не разбирают вручную. Спутник снимает всё, дешифровщиков не хватает —
-      та же диспропорция, с которой мы начали.</div>
+      <div class="note tiny">Общее одно: объём, который ведомства физически не разбирают вручную.
+      Спутник снимает всё, дешифровщиков не хватает — та же диспропорция, с которой мы начали.</div>
     </div>
-
-    <div class="box good">
+    <div class="card tint">
       <h3>Это не гипотеза</h3>
-      <p class="small"><b>Zooniverse Planetary Response Network</b> ставит волонтёрам
-      ровно эту задачу — сравнить снимки «до» и «после» бедствия — и передаёт
-      результат службам реагирования.</p>
-      <p class="small">Миллиард классификаций от трёх миллионов участников снимает
-      вопрос, способны ли неспециалисты давать пригодные данные.</p>
-      <p class="small">Мы не изобретаем подход, а переносим его в российский контур:
-      отечественные источники ДЗЗ, обучение на русском, проверка сотрудником
-      ведомства.</p>
-      <div class="note w tiny"><b>В MVP и пилот не входит.</b> Кейс — про «Чистый берег»,
-      и подменять задачу мы не будем. Нужны партнёрство с МЧС, оперативная съёмка
-      вместо цикла в 2–4 недели и отдельный обучающий трек.</div>
+      <p class="small"><b>Zooniverse Planetary Response Network</b> ставит волонтёрам ровно эту задачу —
+      сравнить снимки «до» и «после» бедствия — и передаёт результат службам реагирования.</p>
+      <p class="small">Миллиард классификаций от трёх миллионов участников снимает вопрос,
+      способны ли неспециалисты давать пригодные данные.</p>
+      <div class="note warm tiny"><b>В MVP и пилот не входит.</b> Кейс — про «Чистый берег», и подменять задачу
+      мы не будем. Нужны партнёрство с МЧС, оперативная съёмка вместо цикла в 2–4 недели
+      и отдельный обучающий трек.</div>
     </div>
   </div>
-
-  <div class="note">Мы решаем задачу берега, но строим не инструмент для берега —
-  а <b>контур доверия между космическими данными и людьми</b>. Он масштабируется
-  на любую территориальную задачу, где спутник видит много, а специалистов мало.</div>
 </section>
 
-<!-- 18 -->
+<!-- 19 -->
 <section class="slide center">
-  <h2 style="font-size:40px;max-width:1000px">Мы не обещаем чистые берега.<br>
-  Мы строим <span class="accent">канал между космическими данными<br>и руками на берегу</span> — и умеем измерить каждое звено.</h2>
-  <div style="margin-top:34px" class="small muted">КОСМОБЕРЕГ · Космохакатон · кейс «Чистый берег»</div>
+  <h2 style="font-size:46px;max-width:1000px">Мы не обещаем чистые берега.<br>
+  Мы строим <span style="color:var(--accent)">канал между космическими данными<br>и руками на берегу</span> —
+  и умеем измерить каждое звено.</h2>
+  <div style="margin-top:36px" class="small muted">КОСМОБЕРЕГ · Космохакатон · кейс «Чистый берег»</div>
 </section>
 
-<div class="brand">КОСМО<b>БЕРЕГ</b></div>
+<div class="brand">Космо<b>берег</b></div>
 <div class="nav">
-  <span id="counter">1 / 18</span>
-  <button id="prev">‹</button>
-  <button id="next">›</button>
+  <span id="counter">1 / 19</span>
+  <button id="prev" aria-label="Назад">‹</button>
+  <button id="next" aria-label="Вперёд">›</button>
 </div>
 
 <script>
