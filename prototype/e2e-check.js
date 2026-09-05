@@ -124,13 +124,21 @@ function runScenario(lang, langName) {
   const after = api.seg('ustie');
   check('отчёт подтверждён', S.report.status === 'approved');
   check('статус clean', after.status === 'clean');
-  check('фактор T обнулён', after.t < 0.1);
+  check('фактор T обнулён', after.t === 0, `T=${after.t}`);
   check('индекс снизился', api.idx100(after) < idxBeforeClean, `${idxBeforeClean} → ${api.idx100(after)}`);
   const sortedAfter = [...S.segments].sort((a, b) => api.attentionIndex(b) - api.attentionIndex(a));
   check('участок ушёл вниз приоритетов', sortedAfter[0].id !== 'ustie');
 
+  // Сверка с бэкендом. Эти же числа обязан выдать сквозной тест
+  // backend/tests/test_cross_check.py — на совпадении двух независимых
+  // реализаций строится проверяемость решения.
+  check('индекс после консенсуса = 85 (как на бэкенде)', idxBeforeClean === 85,
+        `получили ${idxBeforeClean}`);
+  check('индекс после уборки = 48 (как на бэкенде)', api.idx100(after) === 48,
+        `получили ${api.idx100(after)}`);
+
   // локализация
-  check('язык активен', api.LANG === lang || true);
+  check('язык активен', api.LANG === lang, `LANG=${api.LANG}`);
   const segLabel = api.segName(api.seg('ustie'));
   check('название участка локализовано', typeof segLabel === 'string' && segLabel.length > 0);
   const logLine = api.t(S.log[0].key, S.log[0].vars);

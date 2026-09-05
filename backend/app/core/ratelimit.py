@@ -21,6 +21,7 @@ from collections import defaultdict, deque
 from fastapi import Request
 
 from app.core import errors
+from app.core.config import settings
 
 
 class SlidingWindowLimiter:
@@ -64,17 +65,26 @@ class SlidingWindowLimiter:
 
 
 def client_key(request: Request) -> str:
-    """Ключ ограничения — IP клиента.
+    """Ключ ограничения — адрес клиента.
 
-    За обратным прокси реальный адрес приходит в X-Forwarded-For. Заголовку
-    доверяем только потому, что в нашей схеме развёртывания перед API всегда
-    стоит nginx, который его перезаписывает. При прямом доступе к контейнеру
-    заголовок можно подделать — поэтому порт API не публикуется наружу.
+    X-Forwarded-For принимается ТОЛЬКО от доверенного прокси из
+    TRUSTED_PROXIES. Иначе клиент подставляет в заголовок произвольный
+    адрес, счётчик заводится заново на каждый выдуманный, и ограничение
+    обходится целиком.
+
+    Прежняя версия доверяла заголовку безусловно, опираясь на то, что порт
+    API не опубликован наружу. Это оказалось неверно: docker-compose его
+    публикует, и вся защита обходилась одной строкой заголовка.
     """
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    peer = request.client.host if request.client else None
+
+    if peer is not None and peer in settings.TRUSTED_PROXIES:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # Крайний левый адрес — исходный клиент, остальные дописал прокси.
+            return forwarded.split(",")[0].strip()
+
+    return peer or "unknown"
 
 
 # Вход: перебор паролей. Пять попыток в минуту — человеку хватает,

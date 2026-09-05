@@ -63,7 +63,7 @@ class NotificationService:
                     notification.type,
                     _mask(notification.recipient),
                     notification.body_key,
-                    notification.vars or {},
+                    _safe_vars(notification.vars),
                 )
             return True
         except Exception:  # pragma: no cover - защита основного сценария
@@ -120,6 +120,33 @@ class NotificationService:
                 channels=(Channel.EMAIL,),
             )
         )
+
+
+# Значения, которые нельзя писать в журнал даже частично: ссылка на
+# подписание несёт одноразовый токен, а имя — персональные данные
+# несовершеннолетнего.
+SECRET_VARS = frozenset({"url", "token", "sign_url"})
+PERSONAL_VARS = frozenset({"child", "name", "parent"})
+
+
+def _safe_vars(vars_: dict[str, str] | None) -> dict[str, str]:
+    """Убрать из журнала секреты и персональные данные.
+
+    Без этого «честное логирование» само становилось каналом утечки:
+    в лог попадали ФИО подростка и токен согласия, по которому можно
+    подписать разрешение вместо родителя.
+    """
+    if not vars_:
+        return {}
+    safe: dict[str, str] = {}
+    for key, value in vars_.items():
+        if key in SECRET_VARS:
+            safe[key] = "<скрыто>"
+        elif key in PERSONAL_VARS:
+            safe[key] = _mask(str(value))
+        else:
+            safe[key] = str(value)
+    return safe
 
 
 def _mask(contact: str) -> str:

@@ -6,6 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
@@ -21,7 +22,12 @@ from app.api.v1 import (
     segments,
 )
 from app.core.config import settings
-from app.core.errors import APIError, api_error_handler, http_error_handler
+from app.core.errors import (
+    APIError,
+    api_error_handler,
+    http_error_handler,
+    validation_error_handler,
+)
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -66,6 +72,7 @@ app.add_middleware(
 # чтобы фронт не разбирал два вида ответов.
 app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(HTTPException, http_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 
 api = APIRouter(prefix=settings.API_V1_PREFIX)
 api.include_router(public.router)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
+    UniqueConstraint,
     CheckConstraint,
     DateTime,
     Enum,
@@ -127,6 +128,12 @@ class FieldReport(Base, UUIDPrimaryKey, Timestamps):
     )
 
     __table_args__ = (
+        # Один отчёт на участника и акцию. Без этого один волонтёр сдавал
+        # неограниченное число отчётов по одному выезду: каждое
+        # подтверждение начисляло часы заново и повторно снижало индекс
+        # участка. Накрутка учётного показателя и разрушение
+        # приоритизации без единой дополнительной уборки.
+        UniqueConstraint("user_id", "event_id", name="one_report_per_event"),
         Index("ix_field_reports_status", "status"),
         Index("ix_field_reports_segment", "segment_id"),
         Index("ix_field_reports_user", "user_id"),

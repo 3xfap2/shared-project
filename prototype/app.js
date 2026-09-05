@@ -149,7 +149,31 @@ function logEvent(key, vars) {
 function attentionIndex(sg) {
   return 0.40 * sg.s + 0.30 * sg.c + 0.20 * sg.t + 0.10 * sg.a;
 }
+
+/* Порог консенсуса — тот же, что в настройках бэкенда. */
+const VOTES_REQUIRED = 3;
+
+/* Фактор C = согласие × полнота выборки.
+
+   Формула обязана совпадать с services/consensus.py на бэкенде: на
+   совпадении двух независимых реализаций строится проверяемость решения.
+   Здесь все учтённые разметки указывают на проблему, поэтому согласие
+   равно единице, а всё различие даёт полнота выборки. */
+function recomputeConsensus(sg) {
+  const agreement = 1;
+  const completeness = Math.min(1, sg.votes / VOTES_REQUIRED);
+  sg.c = agreement * completeness;
+}
 function idx100(sg) { return Math.round(attentionIndex(sg) * 100); }
+
+/* Экранирование пользовательского ввода перед вставкой в разметку.
+   Имя и город приходят из формы и попадают в innerHTML — без этого
+   прототип исполняет введённый тег. На публичном демо-стенде это вектор. */
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+}
 function seg(id) { return S.segments.find(x => x.id === id); }
 function segName(sg) { return t('seg.' + sg.id); }
 
@@ -573,7 +597,7 @@ function viewMe() {
   const approved = S.report && S.report.status === 'approved';
   return card(`
     <div class="step-tag">${t('me.tag')}</div>
-    <h2>${u.name}</h2>
+    <h2>${esc(u.name)}</h2>
     <div class="kv"><span>${t('me.role')}</span><b>${roleName()}</b></div>
     <div class="kv"><span>${t('me.ageCat')}</span><b>${u.minor ? t('me.minor') : t('me.adult')}</b></div>
     <div class="kv"><span>${t('me.course')}</span><b>${doneCourse ? t('me.courseDone') : t('me.courseWip')}</b></div>
@@ -656,7 +680,7 @@ const ACTIONS = {
     S.myAnnotation = { segId: 'ustie', verdict };
     if (verdict !== 'none') {
       tg.votes += 1;
-      tg.c = Math.min(1, tg.c + 0.18);
+      recomputeConsensus(tg);
       logEvent('log.annotate', { v: t('s3.v' + (verdict === 'dump' ? 'Dump' : 'Litter')), n: tg.votes });
       if (tg.votes >= 3) {
         tg.inQueue = true;
@@ -718,7 +742,7 @@ const ACTIONS = {
     const x = seg(S.report.segId);
     S.report.status = 'approved';
     x.status = 'clean';
-    x.t = 0.05;
+    x.t = 0;
     x.c = Math.max(0, x.c - 0.35);
     x.s = Math.max(0, x.s - 0.30);
     logEvent('log.approveReport', { seg: segName(x) });

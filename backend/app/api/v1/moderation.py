@@ -100,6 +100,21 @@ async def moderation_queue(
     for segment in segments:
         result = consensus.evaluate(segment.annotations)
 
+        # Агрегаты денормализованы, поэтому могут разойтись с фактическими
+        # разметками — например, после удаления аккаунта по требованию
+        # пользователя разметки уходят каскадом, а votes и factor_c
+        # остаются. Инспектор поехал бы на участок, за который уже никто
+        # не голосовал. Сверяем перед показом и чиним расхождение.
+        if segment.votes != result.votes or abs(segment.factor_c - result.factor_c) > 1e-9:
+            segment.votes = result.votes
+            segment.factor_c = result.factor_c
+            attention.recalculate(segment)
+            if result.total == 0:
+                # Голосов не осталось вовсе — участку не место в очереди.
+                segment.queued_at = None
+                segment.status = SegmentStatus.WATCH
+                continue
+
         # Отметки всех разметчиков сводятся в одну картину: инспектору
         # нужно увидеть, куда смотреть, а не читать список координат.
         heatmap: list[Mark] = []
@@ -128,6 +143,10 @@ async def moderation_queue(
                 annotators_accuracy=accuracy,
             )
         )
+
+    # Исправления агрегатов фиксируем: иначе расхождение всплывёт снова
+    # при следующем открытии очереди.
+    await session.commit()
     return items
 
 
@@ -449,8 +468,13 @@ async def decide_report(
 
     if approved:
         report.status = ReportStatus.APPROVED
-        segment.status = SegmentStatus.CLEAN
-        attention.apply_cleanup(segment)
+
+        # Повторно «убирать» уже чистый участок нельзя: apply_cleanup каждый
+        # раз снижает факторы заново, и серия отчётов утопила бы участок
+        # в конце карты приоритетов без дополнительной работы на земле.
+        if segment.status != SegmentStatus.CLEAN:
+            segment.status = SegmentStatus.CLEAN
+            attention.apply_cleanup(segment)
 
         author = await session.get(User, report.user_id)
         if author is not None:
@@ -517,7 +541,12 @@ def _report_out(report: FieldReport) -> FieldReportOut:
     author = report.author
     display_name = author.name if author else "—"
     if author is not None and author.is_minor:
-        display_name = author.name.split(" ")[0]
+        # Профили 14–17 закрыты. Раньше показывали первое слово имени, но
+        # при обычном для отчётности порядке «Фамилия Имя Отчество» это
+        # раскрывало ровно фамилию. Порядок слов угадать нельзя, поэтому
+        # отдаём псевдоним: инспектору нужен идентификатор участника,
+        # а не его имя.
+        display_name = f"Наблюдатель #{str(author.id)[-4:].upper()}"
 
     return FieldReportOut(
         id=report.id,

@@ -15,7 +15,7 @@ import secrets
 import uuid
 from datetime import timedelta
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -23,6 +23,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from app.core import errors
 from app.core.deps import CurrentUser, ObserverUser, SessionDep, StaffUser
+from app.core.ratelimit import client_key, consent_limiter
 from app.db.base import as_utc, utcnow
 from app.models.annotation import Annotation
 from app.models.enums import (
@@ -178,11 +179,23 @@ async def enroll(
     затем инструктаж. Решать, что можно пропустить, интерфейс не может —
     список формирует сервер.
     """
-    event = await session.get(Event, event_id)
+    # Блокируем строку акции на время проверки мест: без этого пять
+    # одновременных запросов при одном свободном месте дают пять записей,
+    # а вместимость выезда — это места в транспорте и норма сопровождающих.
+    # На SQLite блокировка игнорируется, но там запись и так сериализуется.
+    event = (
+        await session.execute(
+            select(Event).where(Event.id == event_id).with_for_update()
+        )
+    ).scalar_one_or_none()
     if event is None:
         raise errors.not_found("event_not_found")
     if event.status != EventStatus.PLANNED:
         raise errors.conflict("event_not_open", status=event.status.value)
+    if as_utc(event.starts_at) <= utcnow():
+        # Статуса PLANNED недостаточно: акция могла просто пройти, а статус
+        # никто не перевёл. Запись на вчерашний выезд бессмысленна.
+        raise errors.conflict("event_already_started")
 
     taken = (
         await session.execute(
@@ -300,7 +313,7 @@ async def request_consent(
     summary="Подписание согласия родителем",
 )
 async def sign_consent(
-    event_id: uuid.UUID, token: str, session: SessionDep
+    request: Request, event_id: uuid.UUID, token: str, session: SessionDep
 ) -> EnrollmentOut:
     """Подтверждение по одноразовой ссылке.
 
@@ -308,6 +321,10 @@ async def sign_consent(
     ради одного действия — лишний сбор персональных данных. Защита —
     неугадываемый токен с ограниченным сроком.
     """
+    # Токен неугадываем, но перебор всё равно ограничиваем: эндпоинт
+    # публичный, и без лимита он остаётся бесплатным полигоном.
+    consent_limiter.check(client_key(request))
+
     consent = (
         await session.execute(select(Consent).where(Consent.token == token))
     ).scalar_one_or_none()

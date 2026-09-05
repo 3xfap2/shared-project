@@ -102,7 +102,7 @@ def _segment(**kw) -> Segment:
         oopt_id="sinie-ozera",
         name_key="seg.ustie.name",
         factor_s=0.82,
-        factor_c=0.73,
+        factor_c=1.00,
         factor_a=0.80,
         created_at=NOW - timedelta(days=200),
         last_verified_at=NOW - timedelta(days=255),
@@ -111,11 +111,20 @@ def _segment(**kw) -> Segment:
     return Segment(**defaults)
 
 
-def test_recalculate_matches_prototype_reference():
-    """Сверка с эталоном прототипа: после разметки индекс участка = 77."""
-    seg = _segment()
+def test_recalculate_is_pure_weight_arithmetic():
+    """Проверка самой формулы на заданных факторах.
+
+    Сверку с прототипом этот тест НЕ выполняет — для неё нужен прогон
+    настоящего консенсуса через API, см. tests/test_cross_check.py.
+    Раньше здесь стояло утверждение «индекс = 77 как в прототипе», но
+    фактор C задавался руками значением, которое код консенсуса не
+    выдаёт, и расхождение двух реализаций тест не ловил.
+    """
+    seg = _segment(factor_s=0.80, factor_c=0.50, factor_a=0.50,
+                   last_verified_at=NOW)
     idx = recalculate(seg, now=NOW)
-    assert idx == 77, f"ожидали 77 (эталон прототипа), получили {idx}"
+    expected = round((0.4 * 0.80 + 0.3 * 0.50 + 0.2 * 0.0 + 0.1 * 0.50) * 100)
+    assert idx == expected
 
 
 def test_cleanup_closes_the_loop():
@@ -129,7 +138,7 @@ def test_cleanup_closes_the_loop():
     assert after < before, "после уборки индекс обязан снизиться"
     assert seg.factor_t == 0.0, "давность обнуляется — участок только что проверен"
     assert seg.last_verified_at == NOW
-    assert seg.factor_c < 0.73, "проблема устранена — консенсус снижается"
+    assert seg.factor_c < 1.00, "проблема устранена — консенсус снижается"
     assert seg.factor_s < 0.82, "на следующем снимке аномалии ожидаемо не будет"
 
 
@@ -175,12 +184,29 @@ def test_consensus_reached_at_threshold():
     r = consensus.evaluate(marks)
     assert r.votes == 3
     assert r.reached is True
-    assert r.factor_c == pytest.approx(1.0)
+    assert r.factor_c == pytest.approx(1.0), "полное согласие при полной выборке"
+
+
+def test_single_annotation_gives_partial_factor():
+    """Одна разметка не должна давать максимальный фактор: это не консенсус."""
+    r = consensus.evaluate([_annotation(Verdict.DUMP)])
+    assert r.factor_c == pytest.approx(1 / 3)
+    assert r.reached is False
+
+
+def test_factor_grows_with_sample_size():
+    values = [
+        consensus.evaluate([_annotation(Verdict.DUMP) for _ in range(n)]).factor_c
+        for n in (1, 2, 3)
+    ]
+    assert values == sorted(values), "фактор растёт по мере набора выборки"
+    assert values[-1] == pytest.approx(1.0)
 
 
 def test_consensus_not_reached_below_threshold():
     r = consensus.evaluate([_annotation(Verdict.DUMP), _annotation(Verdict.DUMP)])
     assert r.votes == 2 and r.reached is False
+    assert r.factor_c == pytest.approx(2 / 3)
 
 
 def test_verdict_none_does_not_count_as_vote():
@@ -188,6 +214,7 @@ def test_verdict_none_does_not_count_as_vote():
     r = consensus.evaluate(marks)
     assert r.votes == 1, "«проблемы нет» не подтверждает проблему"
     assert r.total == 3
+    # согласие 1/3, выборка полная -> C = 1/3
     assert r.factor_c == pytest.approx(1 / 3)
 
 

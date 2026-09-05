@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Response, UploadFile, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.core import errors
@@ -151,9 +152,16 @@ async def create_report(
         status=ReportStatus.DRAFT,
     )
     session.add(report)
-    await session.commit()
-    await session.refresh(report)
 
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        # Один отчёт на участника и акцию — держит уникальный индекс БД.
+        # Проверка в коде не спасала бы от двойной отправки формы.
+        raise errors.conflict("report_already_exists") from exc
+
+    await session.refresh(report)
     return _out(report)
 
 
@@ -325,8 +333,12 @@ def _out(report: FieldReport) -> FieldReportOut:
     author = report.author
     display_name = author.name if author else "—"
     if author is not None and author.is_minor:
-        # Профили 14–17 закрыты: показываем только имя.
-        display_name = author.name.split(" ")[0]
+        # Профили 14–17 закрыты. Раньше показывали первое слово имени, но
+        # при обычном для отчётности порядке «Фамилия Имя Отчество» это
+        # раскрывало ровно фамилию. Порядок слов угадать нельзя, поэтому
+        # отдаём псевдоним: инспектору нужен идентификатор участника,
+        # а не его имя.
+        display_name = f"Наблюдатель #{str(author.id)[-4:].upper()}"
 
     return FieldReportOut(
         id=report.id,

@@ -97,3 +97,33 @@ class TrainerTaskOut(Schema):
     scene_before: SceneOut
     scene_after: SceneOut
     truth: TrainerTruth
+
+
+class SceneIngest(Schema):
+    """Готовая сцена от конвейера ДЗЗ (компонент E).
+
+    Бэкенд не обрабатывает растры — он принимает результат обработки.
+    `anomaly_area_m2` и `signal` вычисляет этап E4; по ряду площадей
+    система сама определяет, растёт ли аномалия.
+    """
+
+    captured_at: date
+    source: SceneSource
+    tile_url_template: str = Field(max_length=500)
+    resolution_m: float | None = Field(default=None, gt=0)
+    cloud_cover: float | None = Field(default=None, ge=0, le=1)
+    anomaly_area_m2: float | None = Field(
+        default=None, ge=0, description="Площадь выявленной аномалии на этой сцене"
+    )
+    signal: float | None = Field(
+        default=None, ge=0, le=1, description="Фактор S, вычисленный этапом E4"
+    )
+
+
+class SceneIngestResult(Schema):
+    scene: SceneOut
+    segment: SegmentOut
+    growth_rate: float | None = None
+    is_growing: bool = False
+    attention_index_before: int
+    attention_index_after: int

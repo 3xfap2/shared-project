@@ -42,7 +42,7 @@ class AnnotationCreate(Schema):
         """Вердикт «есть проблема» без указания места бесполезен —
         инспектор не поймёт, куда смотреть."""
         if self.verdict != Verdict.NONE and not self.marks:
-            raise ValueError("Для вердикта о проблеме нужна хотя бы одна отметка")
+            raise ValueError("marks_required_for_problem")
         return self
 
 

@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     ATTENTION_WEIGHT_T: float = 0.20
     ATTENTION_WEIGHT_A: float = 0.10
 
+    # Попыток на модуль курса. Модулей три, вариантов ответа три — без
+    # лимита курс проходится перебором за шесть запросов, а он служит
+    # условием допуска на охраняемую территорию.
+    MAX_MODULE_ATTEMPTS: int = 5
+
+    # Адреса, которым можно верить в заголовке X-Forwarded-For. Пустой
+    # список означает, что заголовок игнорируется полностью. В проде сюда
+    # попадает адрес обратного прокси.
+    TRUSTED_PROXIES: list[str] = []
+
     # --- Калибровка разметчиков (скрытые эталонные задания) ---
     # Доля контрольных заданий в выдаче. 15% — компромисс: достаточно для
     # статистики за разумное время и не настолько много, чтобы волонтёр
@@ -95,10 +105,26 @@ class Settings(BaseSettings):
     @field_validator("SECRET_KEY")
     @classmethod
     def _secret_must_be_set_in_prod(cls, v: str, info) -> str:
+        """Не пустить в прод ключ-заглушку.
+
+        Проверяем не одну конкретную строку, а признак «это явно не
+        секрет»: раньше валидатор ловил только `dev-only-...`, а
+        `.env.example` предлагал `change-me-in-production` — и защита
+        обходилась ровно тем значением, которое проект сам и подсказывал.
+        """
         env = (info.data or {}).get("ENV")
-        if env in ("staging", "production") and v == "dev-only-insecure-key-change-me":
+        if env not in ("staging", "production"):
+            return v
+
+        lowered = v.lower()
+        looks_placeholder = any(
+            marker in lowered
+            for marker in ("change", "dev-only", "insecure", "example", "secret-key")
+        )
+        if looks_placeholder or len(v) < 32:
             raise ValueError(
-                "SECRET_KEY обязателен в staging/production — задайте его в окружении"
+                "SECRET_KEY в staging/production должен быть случайной строкой "
+                "не короче 32 символов, а не значением-заглушкой"
             )
         return v
 

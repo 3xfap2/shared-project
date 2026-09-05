@@ -386,6 +386,33 @@ paths:
                 items: { $ref: '#/components/schemas/Scene' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+    post:
+      tags: [segments]
+      summary: Принять обработанную сцену от конвейера ДЗЗ
+      description: |
+        Стыковка E4 → C6. Только роль `admin`: эндпоинт вызывает конвейер
+        обработки растров, а не пользователь.
+
+        Бэкенд не работает с пикселями — он принимает метаданные сцены,
+        площадь выявленной аномалии и готовый сигнал S. По ряду площадей
+        система сама определяет динамику: если аномалия выросла между
+        двумя последними измерениями более чем на 15%, сигнал усиливается,
+        а участок получает `is_growing: true`.
+      parameters:
+        - $ref: '#/components/parameters/SegmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SceneIngest' }
+      responses:
+        '201':
+          description: Сцена принята, динамика пересчитана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SceneIngestResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /segments/{segment_id}/subscription:
     put:
       tags: [segments]
@@ -1058,6 +1085,10 @@ components:
         details:
           type: object
           additionalProperties: true
+          description: |
+            Для `code: validation_error` содержит `fields` — список
+            `{field, rule}`. Текста сообщений API не возвращает: перевод
+            собирает клиент по `message_key` и коду правила.
 
     Role:
       type: string
@@ -1461,3 +1492,39 @@ components:
           description: Идентификатор заявки на стороне оператора ДЗЗ — для сверки
         delivered_at: { type: string, format: date-time, nullable: true }
         created_at:   { type: string, format: date-time }
+
+    SceneIngest:
+      type: object
+      required: [captured_at, source, tile_url_template]
+      properties:
+        captured_at:  { type: string, format: date }
+        source:       { $ref: '#/components/schemas/SceneSource' }
+        tile_url_template: { type: string, maxLength: 500 }
+        resolution_m: { type: number, format: float, exclusiveMinimum: 0 }
+        cloud_cover:  { type: number, format: float, minimum: 0, maximum: 1 }
+        anomaly_area_m2:
+          type: number
+          format: float
+          minimum: 0
+          description: Площадь выявленной аномалии — ряд этих значений даёт динамику
+        signal:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Фактор S, вычисленный этапом E4 конвейера
+
+    SceneIngestResult:
+      type: object
+      required: [scene, segment, attention_index_before, attention_index_after]
+      properties:
+        scene:   { $ref: '#/components/schemas/Scene' }
+        segment: { $ref: '#/components/schemas/Segment' }
+        growth_rate: { type: number, format: float, nullable: true }
+        is_growing:  { type: boolean }
+        attention_index_before: { type: integer }
+        attention_index_after:  { type: integer }
+
+    SceneSource:
+      type: string
+      enum: [resurs-p, kanopus-v, sentinel-2, uav]

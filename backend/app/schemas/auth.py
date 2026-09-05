@@ -32,14 +32,14 @@ class RegisterRequest(Schema):
     def _strip_name(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("Имя не может быть пустым")
+            raise ValueError("name_empty")
         return v
 
     @field_validator("password")
     @classmethod
     def _password_not_trivial(cls, v: str) -> str:
         if v.isdigit():
-            raise ValueError("Пароль не может состоять только из цифр")
+            raise ValueError("password_all_digits")
         return v
 
 
