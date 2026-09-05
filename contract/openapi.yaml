@@ -150,6 +150,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /auth/login:
     post:
@@ -177,6 +178,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /auth/refresh:
     post:
@@ -909,6 +911,35 @@ paths:
 
   # ==================== Медиа ====================
 
+  /media/{media_id}:
+    get:
+      tags: [media]
+      summary: Получить загруженное фото
+      description: |
+        Доступ намеренно узкий: фото полевого отчёта содержит геометку и часто
+        снято несовершеннолетним. Право имеют автор загрузки, сотрудник ООПТ
+        той территории, к которой относится отчёт, и администратор.
+
+        Посторонним возвращается **404, а не 403** — иначе перебор
+        идентификаторов покажет, какие фото существуют.
+
+        Используйте значение `url` из `PhotoRef`, не собирайте адрес вручную:
+        в проде здесь будет подписанная ссылка на объектное хранилище.
+      parameters:
+        - name: media_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Файл
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png:  { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /media/upload:
     post:
       tags: [media]
@@ -998,6 +1029,14 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     NotFound:
       description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: |
+        Превышена частота запросов. Действует на вход, регистрацию и
+        подписание согласия. `details.retry_after_seconds` говорит, через
+        сколько повторить — показывайте это пользователю, а не общую ошибку.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

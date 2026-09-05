@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core import errors
 from app.core.config import settings
 from app.core.deps import CurrentUser, SessionDep
+from app.core.ratelimit import client_key, login_limiter, register_limiter
 from app.core.security import (
     TokenError,
     create_access_token,
@@ -47,12 +48,18 @@ def _issue(user: User) -> AuthResponse:
     status_code=status.HTTP_201_CREATED,
     summary="Регистрация",
 )
-async def register(payload: RegisterRequest, session: SessionDep) -> AuthResponse:
+async def register(
+    request: Request, payload: RegisterRequest, session: SessionDep
+) -> AuthResponse:
     """Создать аккаунт.
 
     Возраст приходит числом, а хранится годом рождения — иначе значение
     устареет и система будет требовать согласие родителя у совершеннолетнего.
+
+    Частота ограничена: массовая регистрация — прямая атака на контур
+    доверия, накрутка консенсуса пачкой аккаунтов.
     """
+    register_limiter.check(client_key(request))
     email = payload.email.lower().strip()
 
     user = User(
@@ -77,7 +84,12 @@ async def register(payload: RegisterRequest, session: SessionDep) -> AuthRespons
 
 
 @router.post("/login", response_model=AuthResponse, summary="Вход")
-async def login(payload: LoginRequest, session: SessionDep) -> AuthResponse:
+async def login(
+    request: Request, payload: LoginRequest, session: SessionDep
+) -> AuthResponse:
+    """Вход. Частота ограничена — иначе форма входа работает как оракул
+    для перебора паролей."""
+    login_limiter.check(client_key(request))
     email = payload.email.lower().strip()
     result = await session.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()

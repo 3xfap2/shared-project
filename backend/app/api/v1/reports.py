@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, File, Form, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -15,8 +15,9 @@ from app.core import errors
 from app.core.config import settings
 from app.core.deps import CurrentUser, ObserverUser, SessionDep
 from app.db.base import utcnow
-from app.models.enums import EnrollmentStatus, ReportStatus
+from app.models.enums import EnrollmentStatus, ReportStatus, Role
 from app.models.event import Enrollment, Event
+from app.models.geo import Segment
 from app.models.report import FieldReport, Media
 from app.schemas.report import (
     FieldReportOut,
@@ -93,7 +94,7 @@ async def upload_media(
     await session.commit()
     await session.refresh(media)
 
-    return PhotoRefOut.model_validate(media)
+    return _photo(media)
 
 
 @router.post(
@@ -217,12 +218,107 @@ async def update_report(
 async def get_report(
     report_id: uuid.UUID, user: CurrentUser, session: SessionDep
 ) -> FieldReportOut:
+    """Отчёт доступен автору и сотрудникам ООПТ **своей** территории.
+
+    Проверка территории обязательна, а не желательна: отчёт содержит фото
+    с геометкой, а его автором может быть несовершеннолетний. Роли
+    `oopt_staff` самой по себе недостаточно — иначе сотрудник любого
+    заповедника читал бы данные о подростках со всей страны.
+    """
     report = await session.get(FieldReport, report_id)
     if report is None:
         raise errors.not_found("report_not_found")
-    if report.user_id != user.id and not user.is_oopt_staff:
-        raise errors.forbidden("not_report_author")
-    return _out(report)
+
+    if report.user_id == user.id:
+        return _out(report)
+
+    if user.role == Role.ADMIN:
+        return _out(report)
+
+    if user.role == Role.OOPT_STAFF:
+        segment = await session.get(Segment, report.segment_id)
+        if segment is not None and segment.oopt_id == user.oopt_id:
+            return _out(report)
+        raise errors.forbidden("foreign_territory")
+
+    raise errors.forbidden("not_report_author")
+
+
+@router.get(
+    "/media/{media_id}",
+    summary="Получить загруженное фото",
+    response_class=Response,
+)
+async def get_media(
+    media_id: uuid.UUID, user: CurrentUser, session: SessionDep
+) -> Response:
+    """Отдать файл тому, кто имеет на него право.
+
+    Доступ намеренно узкий. Фото полевого отчёта содержит геометку и часто
+    снято несовершеннолетним: публичная ссылка означала бы, что координаты
+    подростка доступны любому, кто угадает идентификатор.
+
+    Право имеют:
+      * автор загрузки;
+      * сотрудник ООПТ той территории, к которой относится отчёт с этим фото;
+      * администратор проекта.
+
+    Файл отдаётся приложением только на MVP. В проде здесь будет подписанная
+    ссылка на объектное хранилище с ограниченным сроком жизни — тогда трафик
+    минует API, а срок действия ссылки ограничит утечку.
+    """
+    media = await session.get(Media, media_id)
+    if media is None:
+        raise errors.not_found("media_not_found")
+
+    if not await _may_view_media(session, user, media):
+        # 404, а не 403: иначе перебор идентификаторов покажет,
+        # какие фото вообще существуют.
+        raise errors.not_found("media_not_found")
+
+    path = Path(settings.MEDIA_ROOT) / media.storage_key
+    if not path.is_file():
+        raise errors.not_found("media_file_missing")
+
+    return Response(
+        content=path.read_bytes(),
+        media_type=media.content_type,
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "Content-Disposition": "inline",
+        },
+    )
+
+
+async def _may_view_media(session, user, media: Media) -> bool:
+    if media.uploaded_by_id == user.id or user.role == Role.ADMIN:
+        return True
+    if user.role != Role.OOPT_STAFF:
+        return False
+
+    # Сотрудник видит фото, только если оно приложено к отчёту его территории.
+    report = (
+        await session.execute(
+            select(FieldReport).where(
+                (FieldReport.photo_before_id == media.id)
+                | (FieldReport.photo_after_id == media.id)
+            )
+        )
+    ).scalars().first()
+    if report is None:
+        return False
+
+    segment = await session.get(Segment, report.segment_id)
+    return segment is not None and segment.oopt_id == user.oopt_id
+
+
+def _photo(media: Media | None) -> PhotoRefOut | None:
+    """Собрать ссылку на фото с адресом для загрузки."""
+    if media is None:
+        return None
+    ref = PhotoRefOut.model_validate(media)
+    ref.url = f"{settings.API_V1_PREFIX}/media/{media.id}"
+    return ref
 
 
 def _out(report: FieldReport) -> FieldReportOut:
@@ -238,16 +334,8 @@ def _out(report: FieldReport) -> FieldReportOut:
         segment_id=report.segment_id,
         segment_name_key=report.segment.name_key if report.segment else None,
         author_name=display_name,
-        photo_before=(
-            PhotoRefOut.model_validate(report.photo_before)
-            if report.photo_before
-            else None
-        ),
-        photo_after=(
-            PhotoRefOut.model_validate(report.photo_after)
-            if report.photo_after
-            else None
-        ),
+        photo_before=_photo(report.photo_before),
+        photo_after=_photo(report.photo_after),
         volume_kg=report.volume_kg,
         comment=report.comment,
         status=report.status,

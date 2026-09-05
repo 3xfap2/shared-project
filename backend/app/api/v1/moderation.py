@@ -42,7 +42,8 @@ from app.schemas.annotation import (
     ModerationItemOut,
 )
 from app.schemas.geo import SegmentOut
-from app.schemas.report import FieldReportOut, PhotoRefOut, ReportDecisionOut
+from app.api.v1.reports import _photo
+from app.schemas.report import FieldReportOut, ReportDecisionOut
 from app.services import attention, audit, calibration, consensus
 from app.services.notifications import notifications
 
@@ -524,16 +525,8 @@ def _report_out(report: FieldReport) -> FieldReportOut:
         segment_id=report.segment_id,
         segment_name_key=report.segment.name_key if report.segment else None,
         author_name=display_name,
-        photo_before=(
-            PhotoRefOut.model_validate(report.photo_before)
-            if report.photo_before
-            else None
-        ),
-        photo_after=(
-            PhotoRefOut.model_validate(report.photo_after)
-            if report.photo_after
-            else None
-        ),
+        photo_before=_photo(report.photo_before),
+        photo_after=_photo(report.photo_after),
         volume_kg=report.volume_kg,
         comment=report.comment,
         status=report.status,

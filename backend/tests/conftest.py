@@ -97,6 +97,18 @@ async def seeded(session_factory):
     return OOPT_ID
 
 
+@pytest_asyncio.fixture(autouse=True)
+def reset_rate_limits():
+    """Счётчики ограничения частоты живут в памяти процесса и иначе
+    протекали бы между тестами: сценарии регистрируют десятки аккаунтов
+    с одного адреса и упирались бы в лимит."""
+    from app.core.ratelimit import consent_limiter, login_limiter, register_limiter
+
+    for limiter in (login_limiter, register_limiter, consent_limiter):
+        limiter.reset()
+    yield
+
+
 @pytest_asyncio.fixture
 async def client(session_factory, seeded):
     async def _override():
