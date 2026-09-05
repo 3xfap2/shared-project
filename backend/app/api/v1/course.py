@@ -14,6 +14,7 @@ from app.core import errors
 from app.core.config import settings
 from app.core.deps import CurrentUser, SessionDep
 from app.db.base import utcnow
+from app.models.enums import AuditAction
 from app.models.learning import CourseProgress
 from app.schemas.course import (
     AnswerRequest,
@@ -21,6 +22,7 @@ from app.schemas.course import (
     CourseModuleOut,
     CourseProgressOut,
 )
+from app.services import audit
 from app.services import course as course_svc
 
 router = APIRouter(prefix="/course", tags=["course"])
@@ -153,6 +155,16 @@ async def answer_module(
     if course_completed:
         if course_svc.promote_on_completion(user):
             role_changed = user.role
+            # Получение права влиять на данные территории — событие того же
+            # веса, что решение инспектора, и журнал заявлен как полный.
+            audit.record(
+                session,
+                action=AuditAction.ROLE_CHANGED,
+                entity_type="user",
+                entity_id=str(user.id),
+                actor_id=user.id,
+                payload={"to": user.role.value, "reason": "course_completed"},
+            )
         if certificate is None:
             certificate = course_svc.make_certificate_id(
                 str(user.id), utcnow().year

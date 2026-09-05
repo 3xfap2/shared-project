@@ -447,7 +447,17 @@ async def decide_report(
     пересчитывается, участок уходит вниз карты приоритетов, и инспектор
     направляет ресурс на следующий.
     """
-    report = await session.get(FieldReport, report_id)
+    # Строка отчёта блокируется на время решения: без этого два
+    # одновременных подтверждения дают двойные часы и двойной пересчёт
+    # индекса. На SQLite блокировка игнорируется, но там запись
+    # сериализуется самой базой.
+    report = (
+        await session.execute(
+            select(FieldReport)
+            .where(FieldReport.id == report_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
     if report is None:
         raise errors.not_found("report_not_found")
     if report.status != ReportStatus.PENDING:

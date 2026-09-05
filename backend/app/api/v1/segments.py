@@ -75,10 +75,18 @@ async def list_segments(
     segments = list((await session.execute(query)).scalars().all())
 
     subscribed = await _subscribed_ids(session, user)
+    is_staff = user is not None and user.is_oopt_staff
+
     items = []
     for seg in segments:
         item = SegmentOut.model_validate(seg)
         item.is_subscribed = seg.id in subscribed
+        if not is_staff:
+            # Эталонный пул контрольных заданий — это ровно подтверждённые
+            # участки. Публичная выдача `verified` позволяла волонтёру
+            # сверить полученное задание со списком и понять, что его
+            # проверяют. Признак нужен только сотруднику ООПТ.
+            item.verified = False
         items.append(item)
 
     return Page[SegmentOut](items=items, total=total)
